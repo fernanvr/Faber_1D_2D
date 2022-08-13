@@ -1,0 +1,3 @@
+The main function is "Faber_solutions.py" where are calculated the wave equation solutions
+
+To produce figures of convergence error and efficiency could use the file "graph_convergence.py"
