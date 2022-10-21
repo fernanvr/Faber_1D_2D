@@ -1,5 +1,4 @@
 import sys
-import os
 import Methods as meth
 import numpy as np
 
@@ -22,15 +21,8 @@ def acoustic(dx,equ,dim,delta,beta0,ord,T,Ndt,degree,example,method,ind_source):
     # method: type of numerical method to solve the equations ('RK7', 'FA')
     # ind_source: indicator of the wave equations' source term treatment ('H_amplified', 'FA_ricker')
 
-
-
     # Model parameters
     nx,ny,X,Y,param,f,param_ricker,Dt,NDt,points,source_type,var0=meth.domain_source(dx,T,Ndt,dim,equ,example,ord,delta)
-
-    # cheking if there exist the paste to save the results, and creating one if there is not
-    if not os.path.isdir(example+'/'):
-        os.mkdir(example)
-
 
     # 7th order Runge-Kutta
     if method=='RK7':
@@ -50,18 +42,34 @@ degree=np.arange(3,41)
 
 # equation and numerical parameters
 parameters=np.array([[0.002,'scalar',1,'4',2,'1D_homogeneous_0'],[0.002,'scalar',1,'8',2,'1D_homogeneous_0'],[0.002,'scalar_dx2',1,'8',2,'1D_homogeneous_0'],
-                     [0.002,'scalar',1,'8',2,'1D_heterogeneous_2'],[0.002,'scalar_dx2',1,'8',2,'1D_heterogeneous_2'],[0.02,'scalar',2,'4',1.5,'2D_homogeneous_0a'],
-                     [0.02,'scalar_dx2',2,'4',1.5,'2D_homogeneous_0a'],[0.02,'scalar_dx2',2,'4',1.5,'2D_heterogeneous_2'],[0.02,'scalar',2,'4',1.5,'2D_heterogeneous_3a'],
-                     [0.02,'scalar_dx2',2,'4',1.5,'2D_heterogeneous_3a'],[0.02,'scalar',2,'8',1.2,'2D_heterogeneous_3'],[0.02,'elastic',2,'8',1.5,'2D_heterogeneous_3'],
-                     [0.02,'scalar',2,'4',1.5,'2D_heterogeneous_3']])
+                     [0.002,'scalar',1,'4',2,'1D_heterogeneous_1a'],[0.002,'scalar',1,'8',2,'1D_heterogeneous_2'],[0.002,'scalar_dx2',1,'8',2,'1D_heterogeneous_2'],
+                     [0.02,'scalar',2,'4',1.5,'2D_homogeneous_0a'],[0.02,'scalar_dx2',2,'4',1.5,'2D_homogeneous_0a'],[0.02,'scalar_dx2',2,'4',1.5,'2D_heterogeneous_2'],
+                     [0.02,'scalar',2,'4',1.5,'2D_heterogeneous_3a'],[0.02,'scalar_dx2',2,'4',1.5,'2D_heterogeneous_3a'],[0.02,'scalar',2,'8',1.2,'2D_heterogeneous_3'],
+                     [0.02,'elastic',2,'8',1.5,'2D_heterogeneous_3'],[0.02,'elastic',2,'4',1.5,'2D_heterogeneous_3']])
 
 # cycle to compute the solutions
-for i in range(len(parameters)):
-   acoustic(dx=float(parameters[i,0]),equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=1,degree=degree,
-            example=parameters[i,5],method='RK7',ind_source='H_amplified') # for the reference solution
+# for i in range(len(parameters)):
+#    acoustic(dx=float(parameters[i,0]),equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=1,degree=degree,
+#             example=parameters[i,5],method='RK7',ind_source='H_amplified') # for the reference solution
+#
+#    acoustic(dx=float(parameters[i,0]),equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=70,degree=degree,
+#             example=parameters[i,5],method='FA',ind_source='H_amplified') # for Faber approximation
 
-   acoustic(dx=float(parameters[i,0]),equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=70,degree=degree,
-            example=parameters[i,5],method='FA',ind_source='H_amplified') # for Faber approximation
+
+# degree=np.array([9])
+# i=11
+# acoustic(dx=0.02,equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=0.3,Ndt=1,degree=degree,
+#              example=parameters[i,5],method='RK7',ind_source='H_amplified')
+# acoustic(dx=0.01,equ=parameters[i,1],dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=1,degree=degree,
+#              example=parameters[i,5],method='FA',ind_source='H_amplified') # for Faber approximation
+
+#
+# # asdfasd
+#
+# acoustic(dx=0.04,equ="elastic",dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=1,degree=degree,
+#              example="2D_heterogeneous_3",method='RK7',ind_source='H_amplified')
+# acoustic(dx=0.04,equ="elastic",dim=int(parameters[i,2]),delta=0.8,beta0=30,ord=parameters[i,3],T=float(parameters[i,4]),Ndt=1,degree=degree,
+#              example="2D_heterogeneous_3",method='FA',ind_source='H_amplified') # for Faber approximation
 
 
 # ---------------------------------------

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import fmin
 
 
-def graph_q_ellip(Q,a12,a22,b1,b2,c,n,scale):
+def graph_q_ellip(Q,a12,a22,b1,b2,c,n,type,scale):
     plt.plot(Q[:,0],Q[:,1],'ob',alpha=0.8)
 
     a11=1
@@ -34,16 +34,17 @@ def graph_q_ellip(Q,a12,a22,b1,b2,c,n,scale):
     theta=np.linspace(0,2*np.pi,n)
     x=a*np.cos(theta)-x0
     y=b*np.sin(theta)-y0
-    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2)
+    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2,dashes=type)
     plt.axhline(0,color='k')
     plt.axvline(0,color='k')
     plt.xticks(fontsize=13)
     plt.yticks(fontsize=13)
     # plt.ylim([-5,5])
     # plt.xlim(([-21,6]))
+    return (a+b)/2,np.sqrt(np.abs(a**2-b**2)),-np.array([x0*np.cos(th)-y0*np.sin(th),x0*np.sin(th)+y0*np.cos(th)]),a
 
 
-def graph_q_circles1(Q,a12,a22,b1,b2,c,n,scale):
+def graph_q_circles1(Q,a12,a22,b1,b2,c,n,type,scale):
     plt.plot(Q[:,0],Q[:,1],'ob',alpha=0.8)
 
     a11=1
@@ -91,16 +92,17 @@ def graph_q_circles1(Q,a12,a22,b1,b2,c,n,scale):
     theta=np.linspace(0,2*np.pi,n)
     x=a*np.cos(theta)-x0
     y=b*np.sin(theta)-y0
-    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2)
+    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2,dashes=type)
     plt.axhline(0,color='k')
     plt.axvline(0,color='k')
     plt.xticks(fontsize=13)
     plt.yticks(fontsize=13)
     # plt.ylim([-5,5])
     # plt.xlim(([-21,6]))
+    return (a+b)/2,np.sqrt(np.abs(a**2-b**2)),-np.array([x0*np.cos(th)-y0*np.sin(th),x0*np.sin(th)+y0*np.cos(th)]),a
 
 
-def graph_q_circles2(Q,a12,a22,b1,b2,c,n,scale):
+def graph_q_circles2(Q,a12,a22,b1,b2,c,n,type,scale):
     plt.plot(Q[:,0],Q[:,1],'ob',alpha=0.8)
 
     a11=1
@@ -134,10 +136,11 @@ def graph_q_circles2(Q,a12,a22,b1,b2,c,n,scale):
     theta=np.linspace(0,2*np.pi,n)
     x=a*np.cos(theta)-x0
     y=b*np.sin(theta)-y0
-    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2)
+    plt.plot(x*np.cos(th)-y*np.sin(th),x*np.sin(th)+y*np.cos(th), linewidth=2,dashes=type)
     plt.axhline(0,color='k')
     plt.axvline(0,color='k')
     plt.xticks(fontsize=13)
     plt.yticks(fontsize=13)
     # plt.ylim([-5,5])
     # plt.xlim(([-21,6]))
+    return (a+b)/2,np.sqrt(np.abs(a**2-b**2)),-np.array([x0*np.cos(th)-y0*np.sin(th),x0*np.sin(th)+y0*np.cos(th)]),a

@@ -1,6 +1,7 @@
 import numpy as np
 import auxiliary_functions as aux_fun
 from time import time
+import os
 
 
 def domain_source(dx,T,Ndt,dim,equ,example,ord,delta):
@@ -206,7 +207,13 @@ def sol_faber(var0,NDt,Dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,
 
     # cycle to compute the solution for each time-step size
     for i in range(len(NDt)):
-        print(i) # printing to know were the process is
+
+        # to save computations, watch if the solution was calculated for this time-step size
+        if os.path.isfile(str(example)+'/sol_faber_equ_'+str(equ)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(i)+'_dx_'+str(dx)+'.npy'):
+            continue
+
+        print('i-------------------------------------------------------',i) # printing to know were the process is
+        start=time()  # variable to compute the required computation time
 
         # computation of Faber polynomials coefficient
         coefficients_faber=np.array(aux_fun.Faber_approx_coeff(degree[-1]+1,gamma*Dt[i],c*Dt[i],d*Dt[i]).tolist(),dtype=np.float_)
@@ -263,6 +270,8 @@ def sol_faber(var0,NDt,Dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,
             np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_ord_'+ord+'_'+ind_source+'_points_Ndt_'+str(i)+'_degree_'+str(degree[j]),sol_faber_points)
 
         np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(i)+'_dx_'+str(dx),sol_faber)
+
+        print('time ',time()-start) # printing to know the amount of computational time taken
 
 
 def sol_rk(var0,NDt,Dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree):
@@ -371,3 +380,4 @@ def sol_krylov(var0,NDt,Dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,f,param_ricker
             np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_ord_'+ord+'_points_Ndt_'+str(i)+'_degree_'+str(degree[j]),sol_krylov_points)
 
         np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_ord_'+ord+'_Ndt_'+str(i)+'_dx_'+str(dx),sol_krylov)
+

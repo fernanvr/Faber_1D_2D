@@ -7,7 +7,7 @@ from scipy import special
 from scipy import linalg
 from scipy import interpolate
 from time import time
-
+import os
 
 # ---------------------------------------------------------------------------------------------------------
 # Construction of mesh, the velocity field, the source parameters, and the time step sizes
@@ -15,6 +15,10 @@ from time import time
 
 def domain_examples(example,dx,delta,equ):
     # return the velocity field, the mesh points, the source position, and the minimal time step size considered
+
+    # cheking if there exist the paste to save the results, and creating one if there is not
+    if not os.path.isdir(example + '/'):
+        os.mkdir(example)
 
     if example[0]=='1':  # 1D sintetic examples
 
@@ -157,7 +161,7 @@ def domain_examples(example,dx,delta,equ):
     else:
         dt=dx/np.max(np.sqrt(param))/8
 
-    return a,b,nx,ny,X,Y,param,dt,x0,y0
+    return a,b,nx,ny,X,Y,param,dt*7.52,x0,y0
 
 
 def source_examples(equ,example,dim,delta,ord,dx,a,b,nx,ny,param,X,Y,x0,y0,T):
@@ -804,7 +808,7 @@ def spectral_dist(equ,dim,delta,beta0,ord,dx,param):
 
 
 def newton_b(x2,y1):
-    # Newton's method taking the semiaxis b as the independent variable to find the optimal solution
+    # Newton's method taking the semi-axis b as the independent variable to find the optimal solution
     # we now that the function is convex and so, it only have a zero, which will be the optimal solution
 
     x2=np.abs(x2)
@@ -828,16 +832,14 @@ def ellipse_properties(w,scale):
     Q=np.zeros((len(w),2))
     Q[:,0]=w.real
     Q[:,1]=w.imag
-
+    print(Q)
     # calculating the ellipse coefficients
+    a12=0
+    b2=0
     if Q.shape[0]==4:
-        a12=0
-        b2=0
         a22,b1,c=newton_b(Q[0,0],Q[0,1])
     elif Q.shape[0]==5:
-        a12=0
         b1=-Q[1,0]
-        b2=0
         c=-pow(Q[0,0],2)-b1*Q[0,0]
         a22=-c/pow(Q[1,1],2)
 
@@ -854,16 +856,20 @@ def ellipse_properties(w,scale):
 
 def Faber_approx_coeff(m_max,gamma,c,d):
     coeff=np.zeros(m_max)*mp.exp(0)
+    accurate_coeff=1
     for i in range(m_max):
         start=time()
-        coeff[i]=mp.quad(lambda theta: coeff_faber(gamma,theta,c,d,i),[0,1],method='tanh-sinh',error=False,verbose=False,maxdegree=20)
-        # coeff[i]=scipy.integrate.quad(lambda theta: coeff_faber(gamma,theta,c,d,i),0,1,limit=200,epsrel=pow(10,-16))[0]
+        if accurate_coeff==1:
+            coeff[i]=mp.quad(lambda theta: coeff_faber(gamma,theta,c,d,i),[0,1],method='tanh-sinh',error=False,verbose=False,maxdegree=20)
+        else:
+            coeff[i]=integrate.quad(lambda theta: coeff_faber(gamma,theta,c,d,i),0,1,limit=200,epsrel=pow(10,-16))[0]
         end=time()
         print('coef[',i,'] time ',end-start)
         if end-start>60: # to avoid coefficients computation take a prohibited amount of time
-            break
+            accurate_coeff=0
 
     return coeff
+    # return np.array(coeff.tolist(), dtype=float)
 
 
 def coeff_faber(gamma,theta,c,d,j):
@@ -1149,3 +1155,4 @@ def source_xt(f,t,param_ricker,source_type):
         return f*(t-param_ricker[1])*np.exp(-pow(np.pi*param_ricker[0]*(t-param_ricker[1]),2))
 
     return f*(1-2*pow(np.pi*param_ricker[0]*(t-param_ricker[1]),2))*np.exp(-pow(np.pi*param_ricker[0]*(t-param_ricker[1]),2))
+
