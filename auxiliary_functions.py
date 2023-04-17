@@ -8,6 +8,12 @@ from scipy import linalg
 from scipy import interpolate
 from time import time
 import os
+try:
+    import segyio
+except:
+    print('np segyio')
+# import segyio
+
 
 # ---------------------------------------------------------------------------------------------------------
 # Construction of mesh, the velocity field, the source parameters, and the time step sizes
@@ -49,8 +55,8 @@ def domain_examples(example,dx,delta,equ):
     elif example[0]=='2': # 2D sintetic examples
 
         # domain dimensions and amount of points
-        a=8
-        b=8
+        a=4
+        b=4
         nx=int(round(a/dx))
         ny=int(round(b/dx))
         print('nx: ',nx)
@@ -105,10 +111,17 @@ def domain_examples(example,dx,delta,equ):
         x0=a/2
         y0=3*b/4
 
-    elif example=='piece_GdM': # 2D piece of Gto do Mato example
+        if example[-1]=='b':
+            # x0=np.array([1,2,3])
+            # y0=np.array([b-0.2,b-0.2,b-0.2])
+            y0=b-2*dx
+        elif example[-1]=='c':
+            y0=b-4*dx
+
+    elif 'piece_GdM' in example: # 2D piece of Gto do Mato example
 
         # loading and constructing Gato do Mato piece velocity field with its spatial positions
-        param=np.load('piece_GdM/vel.npy')
+        param=np.load('velocity_fields/vel.npy')
         x1=0
         x2=11.992
         y1=0
@@ -120,10 +133,13 @@ def domain_examples(example,dx,delta,equ):
         # defining our computational spatial grid with the PML layer
         x1=x1-delta
         x2=x2+delta
-        y1=y1+delta
+        if ('_b' in example) or ('_c' in example):
+            y1=-2
+        else:
+            y1=y1+delta
         y2=y2-delta
-        nx=int((x2-x1)/dx)
-        ny=int((y1-y2)/dx)
+        nx=round((x2-x1)/dx)
+        ny=round((y1-y2)/dx)
         print('nx: ',nx)
         print('ny: ',ny)
         x2=x1+nx*dx
@@ -146,14 +162,140 @@ def domain_examples(example,dx,delta,equ):
         X=np.expand_dims(X.flatten('F'),1)
         Y=np.expand_dims(Y.flatten('F'),1)
         param=np.expand_dims(param.flatten('F'),1)
+        param=param**2
 
         # source term position
+        if '_b' in example:
+            y0=y1-2*dx
+        elif '_c' in example:
+            y0=y1-4*dx
+        else:
+            y0=y1-(y1-y2)/4
         x0=(x1+x2)/2
-        y0=y1-(y1-y2)/4
 
         # physical domain dimensions
         a=x2
-        b=y2
+        b=y1-y2
+    elif 'SEG_EAGE' in example: # 2D piece of Gto do Mato example
+
+        # loading and constructing Gato do Mato piece velocity field with its spatial positions
+        param=np.transpose(np.load('velocity_fields/seg_eage_xcut_338.npy'))
+
+        x1=0
+        x2=13.52
+        y1=0
+        y2=-4.2
+        x_SEG=np.linspace(x1,x2,param.shape[1])
+        y_SEG=np.linspace(y1,y2,param.shape[0])
+        X_SEG,Y_SEG=np.meshgrid(x_SEG,y_SEG)
+
+        # defining our computational spatial grid with the PML layer
+        if ('_b' in example) or ('_c' in example):
+            y2=-3.5
+            x1=2
+            x2=11
+        else:
+            y1=y1+delta
+        x1=x1-delta
+        x2=x2+delta
+        y2=y2-delta
+        nx=round((x2-x1)/dx)
+        ny=round((y1-y2)/dx)
+        print('nx: ',nx)
+        print('ny: ',ny)
+        x2=x1+nx*dx
+        y2=y1-ny*dx
+        x=np.linspace(x1+dx,x2,nx)
+        y=np.linspace(y1,y2+dx,ny)
+        X,Y=np.meshgrid(x,y)
+
+        # interpolating the velocities to the computational grid
+        points_SEG=np.hstack((np.expand_dims(X_SEG.flatten('F'),1),np.expand_dims(Y_SEG.flatten('F'),1)))
+        points=np.hstack((np.expand_dims(X.flatten('F'),1),np.expand_dims(Y.flatten('F'),1)))
+        param=interpolate.griddata(points_SEG,np.expand_dims(param.flatten('F'),1),points, method='nearest')
+
+        param=param.reshape((ny,nx),order='F')
+        print(param.shape)
+
+        # converting to tring for further calculations
+        np.save(str(example)+'/X', X)
+        np.save(str(example)+'/Y', Y)
+        X=np.expand_dims(X.flatten('F'),1)
+        Y=np.expand_dims(Y.flatten('F'),1)
+        param=np.expand_dims(param.flatten('F'),1)
+        param=param**2
+
+        # source term position
+        if '_b' in example:
+            y0=y1-2*dx
+        elif '_c' in example:
+            y0=y1-4*dx
+        else:
+            y0=y1-(y2-y1)/4
+        x0=(x1+x2)/2
+
+        # physical domain dimensions
+        a=x2-x1
+        b=y1-y2
+    elif 'Marmousi' in example: # 2D piece of Gto do Mato example
+
+        # loading and constructing Gato do Mato piece velocity field with its spatial positions
+        with segyio.open('velocity_fields/marmousi_perfil1.segy') as segyfile:
+            param = np.transpose(segyio.tools.cube(segyfile)[0,:,:])
+        x1=0
+        x2=9.2
+        y1=0
+        y2=-3.5
+        x_Marmousi=np.linspace(x1,x2,param.shape[1])
+        y_Marmousi=np.linspace(y1,y2,param.shape[0])
+        X_Marmousi,Y_Marmousi=np.meshgrid(x_Marmousi,y_Marmousi)
+
+        # defining our computational spatial grid with the PML layer
+        if ('_b' in example) or ('_c' in example):
+            x1=2
+            x2=8
+        else:
+            y1=y1+delta
+            y2=y2-delta
+            x1=x1-delta
+            x2=x2+delta
+        nx=round((x2-x1)/dx)
+        ny=round((y1-y2)/dx)
+        print('nx: ',nx)
+        print('ny: ',ny)
+        x2=x1+nx*dx
+        y2=y1-ny*dx
+        x=np.linspace(x1+dx,x2,nx)
+        y=np.linspace(y1,y2+dx,ny)
+        X,Y=np.meshgrid(x,y)
+
+        # interpolating the velocities to the computational grid
+        points_Marmousi=np.hstack((np.expand_dims(X_Marmousi.flatten('F'),1),np.expand_dims(Y_Marmousi.flatten('F'),1)))
+        points=np.hstack((np.expand_dims(X.flatten('F'),1),np.expand_dims(Y.flatten('F'),1)))
+        param=interpolate.griddata(points_Marmousi,np.expand_dims(param.flatten('F'),1),points, method='nearest')
+
+        param=param.reshape((ny,nx),order='F')/1000
+
+        # converting to tring for further calculations
+        np.save(str(example)+'/X', X)
+        np.save(str(example)+'/Y', Y)
+        X=np.expand_dims(X.flatten('F'),1)
+        Y=np.expand_dims(Y.flatten('F'),1)
+        param=np.expand_dims(param.flatten('F'),1)
+        param=param**2
+
+        # source term position
+        if '_b' in example:
+            y0=y1-2*dx
+        elif '_c' in example:
+            y0=y1-4*dx
+        else:
+            y0=y1-(y2-y1)/4
+        x0=(x2+x1)/2
+
+        # physical domain dimensions
+        a=x2-x1
+        b=y1-y2
 
     # selection of the miminum time step size used for the simulations
     if equ=='elastic':
@@ -161,7 +303,7 @@ def domain_examples(example,dx,delta,equ):
     else:
         dt=dx/np.max(np.sqrt(param))/8
 
-    return a,b,nx,ny,X,Y,param,dt*7.52,x0,y0
+    return a,b,nx,ny,X,Y,param,dt,x0,y0
 
 
 def source_examples(equ,example,dim,delta,ord,dx,a,b,nx,ny,param,X,Y,x0,y0,T):
@@ -196,6 +338,8 @@ def source_examples(equ,example,dim,delta,ord,dx,a,b,nx,ny,param,X,Y,x0,y0,T):
             source_type=example
             if equ=='scalar_dx2':
                 source_type=source_type+'S'
+            else:
+                source_type=source_type+'X'
 
         if example=='1D_homogeneous_0':
             source_type="8"
@@ -241,16 +385,19 @@ def source_examples(equ,example,dim,delta,ord,dx,a,b,nx,ny,param,X,Y,x0,y0,T):
             source_type=example
             var0=source_2D_1_ini_var0(points_sol_x,points_sol_y,X,Y,dx)
         else:
-            f=source_x_2D(x0=x0,y0=y0,rad=0.04,X=X,Y=Y,nx=nx,ny=ny,equ=equ,delta=delta)
+            f=source_x_2D(x0=x0,y0=y0,rad=0.02,X=X,Y=Y,nx=nx,ny=ny,equ=equ,delta=delta)
             var0=np.zeros((len(f[:,0]),1))
             source_type=example
             if equ!='scalar':
                 source_type=source_type+'S'
+            else:
+                source_type=source_type+'X'
 
         if example=='2D_homogeneous_0a' or example=='2D_heterogeneous_3a':
             var0=f
             f=f*0
             source_type='8'
+
 
     return var0,f,source_type
 
@@ -510,9 +657,13 @@ def source_x_2D(x0,y0,rad,X,Y,nx,ny,equ,delta):
     # OUTPUT: Spatial term of the source
 
     S=pow(X-x0,2)+pow(Y-y0,2)
-    ind=(S>pow(rad,2))
+    ind=(S>pow(rad,2)-10e-10)
     S=np.exp(S*np.reciprocal(S-pow(rad,2)))
     S[ind]=0
+
+    if S.ndim==2:
+        S=np.expand_dims(np.sum(S,axis=1),axis=1)
+
     if delta==0:
         if equ=='scalar':
             Source=np.zeros((nx*ny*3,1))
@@ -610,39 +761,39 @@ def source_1D_1_ini_var0(points,x,dx):
 
 # low order Runge-Kutta functions
 
-def RK_7_source(var,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,i,source_type):
+def RK_7_source(var,dt,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,i,source_type):
     # 9 stage 7th order Runge-Kutta
 
-    k1=op.op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
-    k2=op.op_H(var+dt*4/63*k1,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+4/63),param_ricker,source_type)
-    k3=op.op_H(var+dt*(1/42*k1+1/14*k2),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+2/21),param_ricker,source_type)
-    k4=op.op_H(var+dt*(1/28*k1+3/28*k3),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/7),param_ricker,source_type)
-    k5=op.op_H(var+dt*(12551/19652*k1-48363/19652*k3+10976/4913*k4),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+7/17),param_ricker,source_type)
-    k6=op.op_H(var+dt*(-36616931/27869184*k1+2370277/442368*k3-255519173/63700992*k4+226798819/445906944*k5),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+13/24),param_ricker,source_type)
-    k7=op.op_H(var+dt*(-10401401/7164612*k1+47383/8748*k3-4914455/1318761*k4-1498465/7302393*k5+2785280/3739203*k6),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+7/9),param_ricker,source_type)
-    k8=op.op_H(var+dt*(181002080831/17500000000*k1-14827049601/400000000*k3+23296401527134463/857600000000000*k4+2937811552328081/949760000000000*k5-243874470411/69355468750*k6+2857867601589/3200000000000*k7),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+91/100),param_ricker,source_type)
-    k9=op.op_H(var+dt*(-228380759/19257212*k1+4828803/113948*k3-331062132205/10932626912*k4-12727101935/3720174304*k5+22627205314560/4940625496417*k6-268403949/461033608*k7+3600000000000/19176750553961*k8),equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1),param_ricker,source_type)
+    k1=op.op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
+    k2=op.op_H(var+dt*4/63*k1,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+4/63),param_ricker,source_type)
+    k3=op.op_H(var+dt*(1/42*k1+1/14*k2),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+2/21),param_ricker,source_type)
+    k4=op.op_H(var+dt*(1/28*k1+3/28*k3),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/7),param_ricker,source_type)
+    k5=op.op_H(var+dt*(12551/19652*k1-48363/19652*k3+10976/4913*k4),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+7/17),param_ricker,source_type)
+    k6=op.op_H(var+dt*(-36616931/27869184*k1+2370277/442368*k3-255519173/63700992*k4+226798819/445906944*k5),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+13/24),param_ricker,source_type)
+    k7=op.op_H(var+dt*(-10401401/7164612*k1+47383/8748*k3-4914455/1318761*k4-1498465/7302393*k5+2785280/3739203*k6),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+7/9),param_ricker,source_type)
+    k8=op.op_H(var+dt*(181002080831/17500000000*k1-14827049601/400000000*k3+23296401527134463/857600000000000*k4+2937811552328081/949760000000000*k5-243874470411/69355468750*k6+2857867601589/3200000000000*k7),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+91/100),param_ricker,source_type)
+    k9=op.op_H(var+dt*(-228380759/19257212*k1+4828803/113948*k3-331062132205/10932626912*k4-12727101935/3720174304*k5+22627205314560/4940625496417*k6-268403949/461033608*k7+3600000000000/19176750553961*k8),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1),param_ricker,source_type)
 
     return var+dt*(95/2366*k1+3822231133/16579123200*k4+555164087/2298419200*k5+1279328256/9538891505*k6+5963949/25894400*k7+50000000000/599799373173*k8+28487/712800*k9)
 
 
-def RK_2(var,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,i,f,param_ricker,source_type):
+def RK_2(var,dt,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,i,f,param_ricker,source_type):
     # 3 stages 2nd order Runge-Kutta
 
-    k1=op.op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
-    k2=op.op_H(var+dt*k1/2,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
-    k3=op.op_H(var+dt*k2/2,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
+    k1=op.op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
+    k2=op.op_H(var+dt*k1/2,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
+    k3=op.op_H(var+dt*k2/2,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
 
     return var+dt*k3
 
 
-def RK_4(var,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,i,f,param_ricker,source_type):
+def RK_4(var,dt,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,i,f,param_ricker,source_type):
     # 4 stages 4th order Runge-Kutta
 
-    k1=op.op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
-    k2=op.op_H(var+dt*k1/2,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
-    k3=op.op_H(var+dt*k2/2,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
-    k4=op.op_H(var+dt*k3,equ,dim,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1),param_ricker,source_type)
+    k1=op.op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*i,param_ricker,source_type)
+    k2=op.op_H(var+dt*k1/2,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
+    k3=op.op_H(var+dt*k2/2,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1/2),param_ricker,source_type)
+    k4=op.op_H(var+dt*k3,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)+source_xt(f,dt*(i+1),param_ricker,source_type)
 
     return var+dt*(k1+2*(k2+k3)+k4)/6
 
@@ -663,7 +814,7 @@ def ini_var0_2MS(var0,nx,ny,dim,delta):
         return var
 
 
-def method_time_2steps(var0,Nt,dt,nx,ny,dx,c2,source_type,f,param_ricker,equ,dim,delta,beta0,ord,points,example,i):
+def method_time_2steps(var0,Ndt,Nt,dt,T_frac_snapshot,nx,ny,dx,c2,source_type,f,param_ricker,equ,dim,free_surf,delta,beta0,ord,points,example,i):
     # computation of the Leapfrog solution at the last time instant
 
     # declaration of the array saving the solution at fixed points for all time instants
@@ -676,16 +827,20 @@ def method_time_2steps(var0,Nt,dt,nx,ny,dx,c2,source_type,f,param_ricker,equ,dim
     var0=minus1_step_2MS(var0,dx,nx,dt,c2,f,example)
 
     # cyle to compute the solution at each time instant
-    for j in range(0,Nt):
+    for j in range(Nt):
         sol_2time_points[j,:]=var[points,0]
 
         # calculating the solution in the next time instant
-        var1=time_step_2MS(var0,var,equ,dim,delta,beta0,ord,dx,c2,nx,ny,dt,f,j*dt,param_ricker,source_type)
 
-        var0=var
-        var=var1
+        var1=time_step_2MS(var0,var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,dt,f,j*dt,param_ricker,source_type)
 
-    np.save(str(example)+'/sol_2time_equ_'+str(equ)+'_ord_'+ord+'_dx_'+str(dx)+'_points_'+str(i),sol_2time_points)
+        var0=var+0
+        var=var1+0
+
+        if j==(round(Nt*T_frac_snapshot)-1):
+            np.save(str(example)+'/sol_2MS_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt)+'_dx_'+str(dx),var[:nx*ny,0])
+
+    np.save(str(example)+'/sol_2MS_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt)+'_dx_'+str(dx)+'_points',sol_2time_points[::2,:])
 
     return var
 
@@ -709,24 +864,29 @@ def minus1_step_2MS(var0,dx,nx,dt,c2,f,example):
     return var_minus1
 
 
-def time_step_2MS(var0,var,equ,dim,delta,beta0,ord,dx,c2,nx,ny,dt,f,t,param_ricker,source_type):
+def time_step_2MS(var0,var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,dt,f,t,param_ricker,source_type):
     # using the Leapfrog second order in time approximation to compute the solution.
     # The conditionals are product of difference in the formulations regarding in the problem dimensions,
     # and the use of absorbing boundary conditions.
 
     if delta==0:
-        var1=2*var-var0+dt**2*(op.op_H_2ord(var,equ,dim,delta,beta0,ord,dx,c2,nx+1,ny+1)+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
+        var1=2*var-var0+dt**2*(op.op_H_2ord(var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx+1,ny+1)+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
     else:
-        aux=op.op_H_2ord(var,equ,dim,delta,beta0,ord,dx,c2,nx+1,ny+1)
+        aux=op.op_H_2ord(var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx+1,ny+1)
         var1=var0*0
         if dim==1:
-            var1[:nx]=2*var[:nx]-var0[:nx]+dt*op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,0)*(var[:nx]-var0[:nx])+dt**2*(aux[:nx]+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
+            var1[:nx]=2*var[:nx]-var0[:nx]+dt*op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,0,free_surf)*(var[:nx]-var0[:nx])+dt**2*(aux[:nx]+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
             var1[nx:]=4*var[nx:]-3*var0[nx:]-2*dt*(aux[nx:])
         else:
-            var1[:nx*ny]=2*var[:nx*ny]-var0[:nx*ny]+dt*(op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,0)+op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,2,0))*(var[:nx*ny]-var0[:nx*ny])\
-                         +dt**2*(aux[:nx*ny]+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
-            var1[nx*ny:2*nx*ny]=4*var[nx*ny:2*nx*ny]-3*var0[nx*ny:2*nx*ny]-2*dt*(op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,1)*var[nx*ny:2*nx*ny]+aux[nx*ny:2*nx*ny])
-            var1[2*nx*ny:]=4*var[2*nx*ny:]-3*var0[2*nx*ny:]-2*dt*(op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,2,1)*var[2*nx*ny:]+aux[2*nx*ny:])
+            var1[:nx*ny]=2*var[:nx*ny]-var0[:nx*ny]-dt*(op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,0,free_surf)+op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,2,0,free_surf))*(var[:nx*ny]-var0[:nx*ny])\
+                         +dt**2*(aux[:nx*ny]+source_xt(f,t,param_ricker,str(source_type)))
+            var1[nx*ny:2*nx*ny]=var[nx*ny:2*nx*ny]+dt*aux[nx*ny:2*nx*ny]
+            var1[2*nx*ny:]=var[2*nx*ny:]+dt*aux[2*nx*ny:]
+            # this 1rst order approximation is unstable
+            # var1[nx*ny:2*nx*ny]=4*var[nx*ny:2*nx*ny]-3*var0[nx*ny:2*nx*ny]-2*dt*(aux[nx*ny:2*nx*ny])
+            # var1[2*nx*ny:]=4*var[2*nx*ny:]-3*var0[2*nx*ny:]-2*dt*(aux[2*nx*ny:])
+
+
     return var1
 
 
@@ -747,16 +907,16 @@ def ellipse_parameters(a12,a22,b1,b2,c):
         aux=b1
         b1=b1*np.cos(th)+b2*np.sin(th)
         b2=b2*np.cos(th)-aux*np.sin(th)
-    print('th: ',th)
+    # print('th: ',th)
 
     x0=b1/(2*a11)
     y0=b2/(2*a22)
     a=np.sqrt((pow(x0,2)*a11+pow(y0,2)*a22-c)/a11)
     b=np.sqrt((pow(x0,2)*a11+pow(y0,2)*a22-c)/a22)
 
-    print('a:',a)
-    print('b:', b)
-    print('(a+b)^2: ',pow(a+b,2))
+    # print('a:',a)
+    # print('b:', b)
+    # print('(a+b)^2: ',pow(a+b,2))
 
     return (a+b)/2,np.sqrt(np.abs(a**2-b**2)),-np.array([x0*np.cos(th)-y0*np.sin(th),x0*np.sin(th)+y0*np.cos(th)]),a
 
@@ -795,14 +955,23 @@ def spectral_dist(equ,dim,delta,beta0,ord,dx,param):
             elif dim==2:
                 c2=c2*3.62
     if dim==1:
-        vals=np.array([-beta0*pow((delta-dx/2)/delta,2)+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+        if delta==0:
+            vals=np.array([-dx+1j*c2/dx,-dx-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+        else:
+            vals=np.array([-beta0*pow((delta-dx/2)/delta,2)+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
     elif dim==2:
         # vals=np.array([-beta0*pow((delta-dx/2)/delta,2)+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
         # vals=np.array([-beta0,-beta0*pow((delta-dx/2)/delta,2)/2+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
         if beta0*0.75<-c2/dx/10:
-            vals=np.array([-beta0*pow((delta-dx/2)/delta,2)/2+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+            if delta==0:
+                vals=np.array([-dx/2+1j*c2/dx,-dx/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+            else:
+                vals=np.array([-beta0*pow((delta-dx/2)/delta,2)/2+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
         else:
-            vals=np.array([-beta0,-beta0*pow((delta-dx/2)/delta,2)/2+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+            if delta==0:
+                vals=np.array([-dx,-dx/2+1j*c2/dx,-dx/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
+            else:
+                vals=np.array([-beta0,-beta0*pow((delta-dx/2)/delta,2)/2+1j*c2/dx,-beta0*pow((delta-dx/2)/delta,2)/2-1j*c2/dx,1j*c2/dx,-1j*c2/dx])
 
     return vals
 
@@ -832,7 +1001,7 @@ def ellipse_properties(w,scale):
     Q=np.zeros((len(w),2))
     Q[:,0]=w.real
     Q[:,1]=w.imag
-    print(Q)
+    # print(Q)
     # calculating the ellipse coefficients
     a12=0
     b2=0
@@ -845,7 +1014,7 @@ def ellipse_properties(w,scale):
 
     # converting ellipse in coefficients in the desire parameters
     gamma,c,d,a=ellipse_parameters(a12,a22,b1,b2,c)
-    print('gamma: ',gamma,', c: ',c,', d: ',d,', a: ',a)
+    # print('gamma: ',gamma,', c: ',c,', d: ',d,', a: ',a)
 
     if isinstance(gamma,float):
         return gamma*scale,c*scale,d[0]*scale,a*scale
@@ -864,7 +1033,7 @@ def Faber_approx_coeff(m_max,gamma,c,d):
         else:
             coeff[i]=integrate.quad(lambda theta: coeff_faber(gamma,theta,c,d,i),0,1,limit=200,epsrel=pow(10,-16))[0]
         end=time()
-        print('coef[',i,'] time ',end-start)
+        # print('coef[',i,'] time ',end-start)
         if end-start>60: # to avoid coefficients computation take a prohibited amount of time
             accurate_coeff=0
 
@@ -876,7 +1045,7 @@ def coeff_faber(gamma,theta,c,d,j):
     return (mp.exp((gamma+c*c/(4*gamma))*mp.cos(2*mp.pi*theta)+d+1j*(gamma-c*c/(4*gamma))*mp.sin(2*mp.pi*theta))*mp.exp(-1j*2*mp.pi*j*theta)).real
 
 
-def Faber_approx(var,m_max,gamma,c,d,equ,dim,delta,beta0,ord,dx,param,nx,ny,coeff,ind_source,u_k):
+def Faber_approx(var,m_max,gamma,c,d,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,coeff,ind_source,u_k):
 
     mat_dim=len(var)
     result=np.zeros((mat_dim,1))#*mp.exp(0)
@@ -886,13 +1055,13 @@ def Faber_approx(var,m_max,gamma,c,d,equ,dim,delta,beta0,ord,dx,param,nx,ny,coef
     result[:,0]=coeff[0]*var[:,0]
 
     if ind_source=='H_amplified':
-        F1=op.op_H_extended(var,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k)/gamma-c0*var
+        F1=op.op_H_extended(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k)/gamma-c0*var
         def F1_fix(var):
-            return op.op_H_extended(var,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k)/gamma-c0*var
+            return op.op_H_extended(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k)/gamma-c0*var
     else:
-        F1=op.op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny)/gamma-c0*var
+        F1=op.op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)/gamma-c0*var
         def F1_fix(var):
-            return op.op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny)/gamma-c0*var
+            return op.op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)/gamma-c0*var
 
     result[:,0]=result[:,0]+F1[:,0]*coeff[1]
 
@@ -970,27 +1139,27 @@ def ssprk_alpha(mu,grau):
     return alpha
 
 
-def RK_op(var,mu,dt,equ,dim,delta,beta0,ord,dx,c2,nx,ny,grau,scale,u_k):
+def RK_op(var,mu,dt,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,grau,u_k):
 
     alpha=np.array(ssprk_alpha(mu,grau).tolist(),dtype=np.float_)
     approx = var*alpha[0]
 
     aux=var#*mp.exp(0)
-    # aux=var
 
     for i in range(1,grau-1):
-        if scale>0:
-            aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny,u_k)
-        else:
-            aux=aux+mu*dt*op.op_H(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny)
+        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
+        # if delta>0:
+        #     aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
+        # else:
+        #     aux=aux+mu*dt*op.op_H(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny)
         approx=approx+aux*alpha[i]
 
-    if scale>0:
-        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny,u_k)
-        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny,u_k)
+    if delta>0:
+        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
+        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
     else:
-        aux=aux+mu*dt*op.op_H(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny)
-        aux=aux+mu*dt*op.op_H(aux,equ,dim,delta,beta0,ord,dx,c2,nx,ny)
+        aux=aux+mu*dt*op.op_H(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny)
+        aux=aux+mu*dt*op.op_H(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny)
     approx=approx+aux*alpha[grau-1]
 
     return approx
@@ -998,7 +1167,31 @@ def RK_op(var,mu,dt,equ,dim,delta,beta0,ord,dx,c2,nx,ny,grau,scale,u_k):
 
 # Krylov function
 
-def krylov_op(var,degree,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k):
+# def krylov_op(var,degree,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k):
+#
+#     Vm=np.zeros((len(var),degree+1))
+#     Vm[:,0]=var[:,0]/np.linalg.norm(var[:,0],2)
+#
+#     Hm=np.zeros((degree+1,degree+1))
+#
+#     for i in range(degree+1):
+#         start=time()
+#         w=op.op_H_extended(np.expand_dims(Vm[:,i],axis=1),equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k)*dt
+#         print("time 1:",time()-start)
+#         start=time()
+#         for j in range(i+1):
+#             Hm[j,i]=sum(w*np.expand_dims(Vm[:,i],axis=1))
+#             w=w-Hm[j,i]*np.expand_dims(Vm[:,i],axis=1)
+#         if i<degree:
+#             h_aux=np.linalg.norm(w,2)
+#             Vm[:,i+1]=w[:,0]/h_aux
+#         print("time 2:",time()-start)
+#
+#     sdafasd
+#     return np.linalg.norm(var[:,0],2)*Vm.dot(np.expand_dims(linalg.expm(Hm)[:,0],axis=1))
+
+
+def krylov_op(var,degree,dt,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k):
 
     Vm=np.zeros((len(var),degree+1))
     Vm[:,0]=var[:,0]/np.linalg.norm(var[:,0],2)
@@ -1006,13 +1199,17 @@ def krylov_op(var,degree,dt,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k):
     Hm=np.zeros((degree+1,degree+1))
 
     for i in range(degree+1):
-        w=op.op_H_extended(np.expand_dims(Vm[:,i],axis=1),equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k)*dt
+        # start=time()
+        w=op.op_H_extended(np.expand_dims(Vm[:,i],axis=1),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k)[:,0]*dt
+        # print("time 1:",time()-start)
+        # start=time()
         for j in range(i+1):
-            Hm[j,i]=sum(w*np.expand_dims(Vm[:,i],axis=1))
-            w=w-Hm[j,i]*np.expand_dims(Vm[:,i],axis=1)
+            Hm[j,i]=np.dot(w,Vm[:,j])
+            w=w-Hm[j,i]*Vm[:,j]
         if i<degree:
-            h_aux=np.linalg.norm(w,2)
-            Vm[:,i+1]=w[:,0]/h_aux
+            Hm[i+1,i]=np.linalg.norm(w,2)
+            Vm[:,i+1]=w/Hm[i+1,i]
+        # print("time 2:",time()-start)
 
     return np.linalg.norm(var[:,0],2)*Vm.dot(np.expand_dims(linalg.expm(Hm)[:,0],axis=1))
 
@@ -1098,7 +1295,7 @@ def g_approx(f,p,f0,t0,t,source_type,uk_core):
 
 def g_core(p,f0,t0,source_type):
     if len(str(source_type))>1:  # necessary condition to avoid source_type=1
-        if source_type[-1]=='2' or source_type[-1]=='3' or source_type=='piece_GdM':
+        if source_type[-1]=='X':
             uk_core=np.zeros(p-4,dtype=sym.Symbol)
             t_var=sym.Symbol('t_var')
             aux=(-6*pow(sym.pi*f0,2)+24*pow(sym.pi*f0,4)*pow(t_var-t0,2)-8*pow(sym.pi*f0,6)*pow(t_var-t0,4))*sym.exp(-pow(sym.pi*f0*(t_var-t0),2))
@@ -1106,7 +1303,7 @@ def g_core(p,f0,t0,source_type):
                 aux=aux.diff(t_var)
                 uk_core[i]=sym.lambdify(t_var,aux)
             return uk_core
-        if source_type[-1]=='S':
+        elif source_type[-1]=='S':
             uk_core=np.zeros(p-3,dtype=sym.Symbol)
             t_var=sym.Symbol('t_var')
             aux=(-6*pow(sym.pi*f0,2)+24*pow(sym.pi*f0,4)*pow(t_var-t0,2)-8*pow(sym.pi*f0,6)*pow(t_var-t0,4))*sym.exp(-pow(sym.pi*f0*(t_var-t0),2))
@@ -1120,7 +1317,6 @@ def g_core(p,f0,t0,source_type):
 # time part of the source term function
 
 def source_xt(f,t,param_ricker,source_type):
-
     # INPUTS:
     # t: time to evaluate the source term
     # f0: mean frequency of the Ricker's source
