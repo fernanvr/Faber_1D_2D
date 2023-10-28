@@ -1,3 +1,9 @@
-The main function is "Faber_solutions.py" where are calculated the wave equation solutions
+To reproduce the results and images of the error bounds, run the file FA_error_bound_images.py
 
-To produce figures of convergence error and efficiency could use the file "graph_convergence.py"
+To reproduce the results and images of the eigenvalues estimation, run the file Eigenvalues_images.py
+
+To reproduce the results and images of the stability analysis, run the file run_stability.py
+
+To reproduce the results and images of the dispersion analysis, run the file Dispersion_images.py
+
+To reproduce the results and images of the convergence section, run the files Faber_solutions.py and graph_convergence_images.py
