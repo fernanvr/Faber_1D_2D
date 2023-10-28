@@ -1,10 +1,16 @@
 import sys
+import os
+os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=6
+
 import Methods as meth
 import numpy as np
-from multiprocessing import Pool
 
 
-def wave_eq(dx,equ,dim,free_surf,delta,beta0,ord,T,T_frac_snapshot,Ndt,degree,example,method,ind_source='H_amplified',replace=0):
+def wave_eq(dx,equ,dim,free_surf,delta,beta0,ord,T,T_frac_snapshot,Ndt,degree,example,method,ind_source='H_amplified',save_step=True,replace=0):
 
     # solution of 1d acoustic equation with font term and constructed solutions with PML to validate accuracy
     # of the methods: RK7, Faber, RK-High order, RK2, Devito
@@ -29,7 +35,7 @@ def wave_eq(dx,equ,dim,free_surf,delta,beta0,ord,T,T_frac_snapshot,Ndt,degree,ex
     # Model parameters
     nx,ny,X,Y,param,f,param_ricker,Dt,NDt,points,source_type,var0=meth.domain_source(dx,T,T_frac_snapshot,Ndt,dim,equ,example,ord,delta)
 
-    meth.method_solver(method,var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace)
+    meth.method_solver(method,var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace,save_step)
 
 
 def error_acoustic(Ndt,degree,example,dx,c2_max):
@@ -333,106 +339,13 @@ def acoustic_eigen(dx,equ,dim,abc,delta,beta0,ord,T,Ndt,example):
     # plt.show()
 
 
-degree=np.arange(3,31)
+degree=np.arange(3,31,2)
 
-# wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',1.5,1,np.array([1]),degree,'Marmousi_b','2MS','H_amplified')
+# wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',1.3,1,np.array([1]),degree,'2D_homogeneous_0b','2MS',replace=1)
+# wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',1.5,1,np.array([1]),degree,'Marmousi_b','2MS')
 # wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',2,1,np.array([1]),degree,'SEG_EAGE_b','2MS','H_amplified')
 # wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',3,1,np.array([1]),degree,'piece_GdM_b','2MS','H_amplified')
+wave_eq(0.04,'scalar_dx2',2,1,0.8,30,'8',1.1,1,np.array([1]),degree,'2D_heterogeneous_3b','2MS',replace=1)
 
 # wave_eq(0.005,'scalar_dx2',2,1,0.8,30,'8',2.2,1/2,np.array([1]),degree,'2D_heterogeneous_3c','RK7','H_amplified')
-
-# # Marmousi (cdf01)
-# pool = Pool(processes=63) # start 12 worker processes
-#
-# T=3
-# T_frac_snapshot=1/2
-# methods=np.array(['RK7','RK2','RK4','2MS','FA','HORK','KRY'])
-#
-# pool.apply_async(wave_eq, args=(0.005,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([1]),0,'Marmousi_c','RK7','H_amplified',))
-#
-# for l in range(50):
-#     for i in range(4):
-#         pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),0,'Marmousi_b',methods[i],'H_amplified',))
-#
-#     for i in range(10):
-#         for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[i]]),'Marmousi_b',methods[4+j],'H_amplified',))
-#
-#     for i in range(len(degree)-10):
-#             for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[len(degree)-1-i]]),'Marmousi_b',methods[4+j],'H_amplified',))
-# pool.close()
-# pool.join()
-
-
-# # SEG_EAGE (guepardo01)
-# pool = Pool(processes=23) # start 23 worker processes
-#
-# T=4
-# T_frac_snapshot=1/2
-# methods=np.array(['RK7','RK2','RK4','2MS','FA','HORK','KRY'])
-#
-# pool.apply_async(wave_eq, args=(0.005,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([1]),0,'SEG_EAGE_c','RK7','H_amplified',))
-#
-# for l in range(50):
-#     for i in range(4):
-#         pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),0,'SEG_EAGE_b',methods[i],'H_amplified',))
-#
-#     for i in range(10):
-#         for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[i]]),'SEG_EAGE_b',methods[4+j],'H_amplified',))
-#
-#     for i in range(len(degree)-10):
-#             for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[len(degree)-1-i]]),'SEG_EAGE_b',methods[4+j],'H_amplified',))
-# pool.close()
-# pool.join()
-
-
-# # piece_GdM (guepardo00)
-# pool = Pool(processes=23) # start 23 worker processes
-#
-# T=3
-# T_frac_snapshot=1/2
-# methods=np.array(['RK7','RK2','RK4','2MS','FA','HORK','KRY'])
-#
-# pool.apply_async(wave_eq, args=(0.005,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([1]),0,'piece_GdM_c','RK7','H_amplified',))
-#
-# for l in range(50):
-#     for i in range(4):
-#         pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),0,'piece_GdM_b',methods[i],'H_amplified',))
-#
-#     for i in range(10):
-#         for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[i]]),'piece_GdM_b',methods[4+j],'H_amplified',))
-#
-#     for i in range(len(degree)-10):
-#             for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,0.8,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[len(degree)-1-i]]),'piece_GdM_b',methods[4+j],'H_amplified',))
-# pool.close()
-# pool.join()
-
-
-# # Corner Model (cfd01)
-# pool = Pool(processes=12) # start 63 worker processes
-#
-# T=2.2
-# T_frac_snapshot=1/2
-# methods=np.array(['RK7','RK2','RK4','2MS','FA','HORK','KRY'])
-#
-# pool.apply_async(wave_eq, args=(0.005,'scalar_dx2',2,1,1.0,30,'8',T,T_frac_snapshot,np.array([1]),0,'2D_heterogeneous_3c','RK7','H_amplified',))
-#
-# for l in range(50):
-#     for i in range(4):
-#         pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,1.0,30,'8',T,T_frac_snapshot,np.array([l+1]),0,'2D_heterogeneous_3b',methods[i],'H_amplified',))
-#
-#     for i in range(10):
-#         for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,1.0,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[i]]),'2D_heterogeneous_3b',methods[4+j],'H_amplified',))
-#
-#     for i in range(len(degree)-10):
-#             for j in range(3):
-#                 pool.apply_async(wave_eq, args=(0.01,'scalar_dx2',2,1,1.0,30,'8',T,T_frac_snapshot,np.array([l+1]),np.array([degree[len(degree)-1-i]]),'2D_heterogeneous_3b',methods[4+j],'H_amplified',))
-# pool.close()
-# pool.join()
 

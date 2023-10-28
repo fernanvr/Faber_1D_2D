@@ -5,6 +5,7 @@ import Methods as meth
 import os
 from matplotlib.ticker import FormatStrFormatter
 import dispersion_tfourier as dis
+import math
 
 
 def adjust_lightness(color, amount=0.5):
@@ -52,6 +53,8 @@ def error_acoustic(Ndt,example,dim,dx,c2_max,equ,ord,ind_source):
         err_sol_faber=err_sol_faber*np.sqrt(dx)
 
     # ploting the error for the polynomial degrees declared before
+
+    # plt.rcParams["figure.figsize"] = [8.5,5]
     ax=plt.gca()
     for i in range(len(degree)):
         # plt.plot(dt,err_sol_faber[i,:],label='FA'+str(degree[i]),linewidth=3,marker='D')
@@ -59,9 +62,8 @@ def error_acoustic(Ndt,example,dim,dx,c2_max,equ,ord,ind_source):
         ax.scatter(dt,err_sol_faber[i,:], linewidth=3,marker='D',alpha=0.5)
         ax.plot([],[],label='FA'+str(degree[i]),color=lin.get_color(),linewidth=3,marker='D')
 
-    plt.legend(fontsize=19)
-    plt.xlabel('time-step $\Delta t$',size='23')
-    plt.ylabel('$||Err||_2$',size='22')
+    plt.xlabel('time-step $\Delta t$',size='24')
+    plt.ylabel('$||Err||_2$',size='24')
     plt.ticklabel_format(style="sci", scilimits=(0,0))
     plt.gca().xaxis.get_offset_text().set_fontsize(17)
     plt.yscale('log')
@@ -69,10 +71,11 @@ def error_acoustic(Ndt,example,dim,dx,c2_max,equ,ord,ind_source):
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
     # plt.yticks(pow(10.0,np.arange(0, -17, step=-2)),fontsize=17)
-    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.95, top=0.9)
-    plt.legend(fontsize=19)
+    plt.subplots_adjust(left=0.22, bottom=0.17, right=0.9, top=0.9)
+    # plt.legend(fontsize=20,bbox_to_anchor=(1.1, 0.5), loc="center left", borderaxespad=0)
     plt.ylim(pow(10,-16),30)
     plt.savefig(str(example)+'/faber_equ_'+equ+'_'+str(example)+'_ord_'+ord+'_source_'+ind_source+'.pdf')
+    plt.savefig('Convergence_images/faber_equ_'+equ+'_'+str(example)+'_ord_'+ord+'_source_'+ind_source+'.pdf')
     plt.show()
 
 
@@ -159,7 +162,7 @@ def graph_experiments_dt_max(example,ord,equ,ind_source,max_degree,dx,c2_max,ind
     plt.ticklabel_format(axis="y",style="sci", scilimits=(0,0))
     # plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.subplots_adjust(left=0.18, bottom=0.15, right=0.9, top=0.95)
-    plt.savefig('faber_experiments_'+ind+'.pdf')
+    plt.savefig('Convergence_images/faber_experiments_'+ind+'.pdf')
     plt.show()
 
 
@@ -248,7 +251,7 @@ def eff_graph_experiments(example,ord,equ,ind_source,max_degree,dx,c2_max,ind,Nd
     # plt.ylim([1-2*pow(10,-10), 1+1.02*pow(10,-5)])
     # plt.xlim([-0.01, 1])
     plt.subplots_adjust(left=0.18, bottom=0.15, right=0.9, top=0.9)
-    plt.savefig('faber_experiments_eff_'+ind+'.pdf')
+    plt.savefig('Convergence_images/faber_experiments_eff_'+ind+'.pdf')
     plt.show()
 
 
@@ -291,6 +294,7 @@ def spatial_error(example,equ,ord,ind_source,dx,nx,ny,x0_pos,Ndt_0,dephs_y,degre
     plt.draw()
     plt.tight_layout()
     plt.savefig(example+'/wave_propagation_example0.pdf')
+    plt.savefig('Convergence_images/wave_propagation_example0.pdf')
     plt.show()
 
     # calculating and plotting the error
@@ -302,20 +306,139 @@ def spatial_error(example,equ,ord,ind_source,dx,nx,ny,x0_pos,Ndt_0,dephs_y,degre
         plt.plot(depth,np.abs(RK_ref[:,x0_pos]-aux[:,x0_pos]),linestyle='-',label='FA'+str(degree[i]),linewidth=2)
 
     # graph parameters and figure saving
-    plt.xlabel('Depth [km]',size='22')
-    plt.ylabel('Error ($||\cdot||_{\infty}$)',size='22')
+    plt.xlabel('Depth [km]',size='26')
+    plt.ylabel('Error ($||\cdot||_{\infty}$)',size='26')
     plt.yscale('log')
-    plt.xticks(fontsize=19)
-    plt.yticks(fontsize=19)
-    plt.legend(fontsize=19)
-    plt.ylim(pow(10,-20))
+    plt.xticks(fontsize=22)
+    plt.yticks(fontsize=22)
+    plt.legend(fontsize=20)
+    plt.ylim(pow(10,-18))
     plt.tight_layout()
     # plt.subplots_adjust(left=0.18, bottom=0.15, right=0.9, top=0.9)
     plt.savefig(example+'/error_spatial_cut.pdf')
+    plt.savefig('Convergence_images/error_spatial_cut.pdf')
     plt.show()
 
 
-def graph_methods_dt_max(example,methods,equ,free_surf,ord,Ndt,degree,dx,dim=2,delta=0.8,ind_source='H_amplified',tol=1e-5,fig_ind=''):
+def sol_ref_load(example,equ,free_surf,ord,dx,delta,no_PML,time_space):
+    # Function to load the reference solution in dependence of the type of error calculated and the physycal domain restriction
+
+    if time_space=='space':    # reference solutions using the snapshot information at a given time
+        sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_1_dx_'+str(dx/2)+'.npy')
+        a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx/2,delta,equ)
+        sol_ref=sol_ref.reshape((ny,nx),order='F')
+        sol_ref=sol_ref[::2,:-1:2]
+        if no_PML:
+            a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
+            cut_PML=int(delta/dx)
+            if free_surf==1:
+                sol_ref=sol_ref[:-cut_PML,cut_PML:-cut_PML]
+            else:
+                sol_ref=sol_ref[cut_PML:-cut_PML,cut_PML:-cut_PML]
+        else:
+            sol_ref=sol_ref.flatten('F')
+    else:        # reference solution using the seismogram data
+        sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_1_dx_'+str(dx/2)+'_points.npy')
+        sol_ref=sol_ref[::2,::2]
+        if no_PML:
+            cut_PML=int(delta/dx)
+            sol_ref=sol_ref[:,cut_PML:-cut_PML]
+
+    return sol_ref
+
+
+def sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt,nx,ny,degree=0,ind_source="H_amplified"):
+    # Function to load the approximated solution in dependence of the type of error calculated and the physycal domain restriction
+
+    if time_space=='space':    # approximated solution using the snapshot information at a given time
+        if meth_ind<10:
+            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt)+'_dx_'+str(dx)+'.npy')
+        else:
+            if meth_label=='sol_faber':
+                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
+            else:
+                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
+        if no_PML:
+            sol=sol.reshape((ny,nx),order='F')
+            cut_PML=int(delta/dx)
+            if free_surf==1:
+                sol=sol[:-cut_PML,cut_PML:-cut_PML]
+            else:
+                sol=sol[cut_PML:-cut_PML,cut_PML:-cut_PML]
+
+    else:        # approximated solution using the seismogram data
+        if meth_ind<10:
+            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt)+'_dx_'+str(dx)+'_points.npy')
+        else:
+            if meth_label=='sol_faber':
+                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_points_Ndt_'+str(Ndt)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
+            else:
+                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
+        if no_PML:
+            cut_PML=int(delta/dx)
+            sol=sol[:,cut_PML:-cut_PML]
+
+    return sol
+
+
+def error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=1):
+    if time_space=='space':
+        return np.sqrt(np.sum(pow(sol-sol_ref,2))*dx**dim)
+    else:
+        sol_ref=sol_ref[::Ndt,:]
+        if len(sol)>len(sol_ref):
+            sol=sol[:-1,:]
+        return np.sqrt(np.sum(pow(sol-sol_ref,2))*dx*2*dt)
+
+
+def spatial_discr_error(example,methods,degree,time_space,free_surf=1,equ='scalar_dx2',dx=0.01,ord='8',dim=2,delta=0.8,no_PML=True,ind_source='H_amplified',fig_ind=''):
+    # Error of each method using the minimum time-step consider to account for the error produced by the spatial discretization
+
+    sol_ref=sol_ref_load(example,equ,free_surf,ord,dx,delta,no_PML,time_space)
+    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
+
+    color=np.array(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2','#7f7f7f', '#bcbd22', '#17becf'])
+    names_prov=dis.method_label_graph(methods)
+    marker=np.array(['D','o','s','v','P','H','D'])
+    line=np.array(['-','--','-.'])
+    count_high_order=0
+    plt.rcParams["figure.figsize"] = [7,5]
+    ax=plt.gca()
+    for i in range(len(methods)):
+        meth_ind,meth_label=dis.method_label(methods[i])
+        if meth_ind<10:
+            sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,1,nx,ny)
+            error=error_norm(sol,sol_ref,time_space,dim,dx,dt)
+            ax.scatter(meth_ind,error, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],s=60,zorder=5*i)
+            ax.scatter(meth_ind,error,marker=marker[i],color=color[i],s=30,zorder=5*i)
+            ax.scatter([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
+        else:
+            error=np.zeros(len(degree))+2
+            for j in range(len(degree)):
+                try:
+                    sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,1,nx,ny,degree=degree[j],ind_source=ind_source)
+                except:
+                    continue
+                error[j]=error_norm(sol,sol_ref,time_space,dim,dx,dt)
+            error[error>1]=float('nan')
+            lin,=ax.plot(degree,error,linewidth=2,linestyle=line[count_high_order],alpha=0.9,color=color[i],zorder=5*i)
+            ax.scatter(degree,error, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],zorder=5*i)
+            ax.plot([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
+            count_high_order+=1
+
+    plt.xticks(fontsize=19)
+    plt.yticks(fontsize=19)
+    # plt.legend(fontsize=20)
+    plt.ylabel('$\Delta t_{max}$',fontsize=20)
+    plt.xlabel('# Stages',fontsize=20)
+    ax.yaxis.get_offset_text().set(size=16)
+    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.95)
+    plt.savefig(str(example)+'_images/'+example+'_methods_spatial_error'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'_'+time_space+'.pdf')
+    # plt.show()
+    plt.clf()
+
+
+def graph_methods_dt_max(example,methods,Ndt,degree,time_space,free_surf=1,equ='scalar_dx2',dx=0.01,ord='8',dim=2,delta=0.8,no_PML=True,ind_source='H_amplified',tol=1e-5,fig_ind=''):
     # graphics of the maximum \Delta t allowed by methods and approximation degrees at a given numerical experiment
 
     # INPUT:
@@ -329,74 +452,69 @@ def graph_methods_dt_max(example,methods,equ,free_surf,ord,Ndt,degree,dx,dim=2,d
     # ind: string used to put in the figure name, for saving
     # Ndt: amount of time-step sizes used to compute the solutions (int)
 
-    sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[0])+'_dx_'+str(dx/2)+'.npy')
-    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx/2,delta,equ)
-    sol_ref=sol_ref.reshape((ny,nx),order='F')
-    sol_ref=sol_ref[1::2,:-1:2]
-    # sol_ref=np.expand_dims(sol_ref.flatten('F'),1)
-    sol_ref=sol_ref.flatten('F')
-    sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[0])+'_dx_'+str(dx)+'.npy')
+    sol_ref=sol_ref_load(example,equ,free_surf,ord,dx,delta,no_PML,time_space)
+    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
 
     color=np.array(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2','#7f7f7f', '#bcbd22', '#17becf'])
-    names_prov=np.array(['FA','HORK','KRY','RK9-7','RK3-2','RK4-4','Leap frog'])
+    # names_prov=np.array(['FA','HORK','KRY','RK9-7','RK3-2','RK4-4','Leap-frog'])
+    names_prov=dis.method_label_graph(methods)
     marker=np.array(['D','o','s','v','P','H','D'])
     line=np.array(['-','--','-.'])
     count_high_order=0
+    plt.rcParams["figure.figsize"] = [9,6]
     ax=plt.gca()
     for i in range(len(methods)):
         meth_ind,meth_label=dis.method_label(methods[i])
         if meth_ind<10:
             max_dt=0
             for j in range(len(Ndt)):
-                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[j])+'_dx_'+str(dx)+'.npy')
-                # error=np.max(np.abs(sol-sol_ref))
-                error=np.sqrt(np.sum(pow(sol-sol_ref,2))*dx**dim)
-                if error>tol:
+                sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[j],nx,ny)
+                error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=Ndt[j])
+                if error>tol or math.isnan(error):
                     break
                 else:
                     max_dt=2*dt*Ndt[j]
             ax.scatter(meth_ind,max_dt, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],s=60,zorder=5*i)
             ax.scatter(meth_ind,max_dt,marker=marker[i],color=color[i],s=30,zorder=5*i)
-            # ax.scatter([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
             ax.scatter([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
         else:
             max_dt=np.zeros(len(degree))
             for j in range(len(degree)):
+                cont_miss=0   # counter of missing files
                 for k in range(len(Ndt)):
-                    if methods[i]=='FA':
-                        try:
-                            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[k])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy')
-                        except:
-                            continue
-                    else:
-                        try:
-                            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[k])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy')
-                        except:
-                            continue
-                    # error=np.max(np.abs(sol-sol_ref))
-                    error=np.sqrt(np.sum(pow(sol-sol_ref,2))*dx**dim)
-                    if error>tol:
+                    try:
+                        sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[k],nx,ny,degree=degree[j],ind_source=ind_source)
+                    except:
+                        cont_miss+=1
+                        if cont_miss>20:
+                            max_dt[j]=float('nan')
+                            break
+                        continue
+                    error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt[k])
+                    if error>tol or math.isnan(error):
                         break
                     else:
                         max_dt[j]=2*dt*Ndt[k]
+            max_dt[max_dt==0]=float('nan')
             lin,=ax.plot(degree,max_dt,linewidth=2,linestyle=line[count_high_order],alpha=0.9,color=color[i],zorder=5*i)
             ax.scatter(degree,max_dt, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],zorder=5*i)
-            # ax.scatter(degree,max_dt,marker=marker[i],color=color1[i],s=5,zorder=5*i)
-            # ax.plot([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
             ax.plot([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
             count_high_order+=1
 
-    plt.xticks(fontsize=19)
-    plt.yticks(fontsize=19)
+    plt.xticks(fontsize=21)
+    plt.yticks(fontsize=21)
     plt.legend(fontsize=20)
-    plt.ylabel('$\Delta t_{max}$',fontsize=20)
-    plt.xlabel('# Stages',fontsize=20)
-    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.95)
-    plt.savefig(str(example)+'/methods_max_dt'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'.pdf')
+    plt.ylabel('$\Delta t_{max}$',fontsize=27)
+    plt.xlabel('# Stages',fontsize=24)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.95, top=0.95)
+    plt.savefig(str(example)+'_images/'+example+'_methods_max_dt'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'_'+time_space+'.pdf')
     plt.show()
+    # plt.clf()
 
 
-def graph_methods_eff(example,methods,equ,free_surf,ord,Ndt,degree,dx,dim=2,delta=0.8,ind_source='H_amplified',tol=1e-5,fig_ind=''):
+def graph_methods_eff(example,methods,Ndt,degree,time_space,equ='scalar_dx2',free_surf=1,dx=0.01,ord='8',dim=2,delta=0.8,no_PML=True,ind_source='H_amplified',tol=1e-5,fig_ind=''):
     # graphics of the maximum \Delta t allowed by methods and approximation degrees at a given numerical experiment
 
     # INPUT:
@@ -410,74 +528,159 @@ def graph_methods_eff(example,methods,equ,free_surf,ord,Ndt,degree,dx,dim=2,delt
     # ind: string used to put in the figure name, for saving
     # Ndt: amount of time-step sizes used to compute the solutions (int)
 
-    sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[0])+'_dx_'+str(dx/2)+'.npy')
-    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx/2,delta,equ)
-    sol_ref=sol_ref.reshape((ny,nx),order='F')
-    sol_ref=sol_ref[1::2,:-1:2]
-    # sol_ref=np.expand_dims(sol_ref.flatten('F'),1)
-    sol_ref=sol_ref.flatten('F')
-    sol_ref=np.load(example+'/RK_ref_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[0])+'_dx_'+str(dx)+'.npy')
+    sol_ref=sol_ref_load(example,equ,free_surf,ord,dx,delta,no_PML,time_space)
+    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
 
     color=np.array(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2','#7f7f7f', '#bcbd22', '#17becf'])
-    names_prov=np.array(['FA','HORK','KRY','RK9-7','RK3-2','RK4-4','Leap frog'])
+    # names_prov=np.array(['FA','HORK','KRY','RK9-7','RK3-2','RK4-4','Leap frog'])
+    names_prov=dis.method_label_graph(methods)
     marker=np.array(['D','o','s','v','P','H','D'])
     line=np.array(['-','--','-.'])
     count_high_order=0
+    plt.rcParams["figure.figsize"] = [7.5,5]
     ax=plt.gca()
     for i in range(len(methods)):
         meth_ind,meth_label=dis.method_label(methods[i])
         if meth_ind<10:
             max_dt=0
             for j in range(len(Ndt)):
-                sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[j])+'_dx_'+str(dx)+'.npy')
-                # error=np.max(np.abs(sol-sol_ref))
-                error=np.sqrt(np.sum(pow(sol-sol_ref,2))*dx**dim)
-                if error>tol:
+                sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[j],nx,ny)
+                error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=Ndt[j])
+                if error>tol or math.isnan(error):
                     break
                 else:
                     max_dt=2*dt*Ndt[j]
-            ax.scatter(meth_ind,meth_ind/max_dt, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],s=60,zorder=5*i)
-            ax.scatter(meth_ind,meth_ind/max_dt,marker=marker[i],color=color[i],s=30,zorder=5*i)
+            ax.scatter(meth_ind,np.log10(meth_ind/max_dt), linewidth=2,marker=marker[i],alpha=0.5,color=color[i],s=60,zorder=5*i)
+            ax.scatter(meth_ind,np.log10(meth_ind/max_dt),marker=marker[i],color=color[i],s=30,zorder=5*i)
             # ax.scatter([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
             ax.scatter([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
         else:
             max_dt=np.zeros(len(degree))
             for j in range(len(degree)):
+                cont_miss=0   # counting missing files
                 for k in range(len(Ndt)):
-                    if methods[i]=='FA':
-                        try:
-                            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[k])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy')
-                        except:
-                            continue
-                    else:
-                        try:
-                            sol=np.load(example+'/'+meth_label+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[k])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy')
-                        except:
-                            continue
-                    # error=np.max(np.abs(sol-sol_ref))
-                    error=np.sqrt(np.sum(pow(sol-sol_ref,2))*dx**dim)
-                    if error>tol:
+                    try:
+                        sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[k],nx,ny,degree=degree[j],ind_source=ind_source)
+                    except:
+                        cont_miss+=1
+                        if cont_miss>20:
+                            max_dt[j]=float('nan')
+                            break
+                        continue
+                    error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=Ndt[k])
+                    if error>tol or math.isnan(error):
                         break
                     else:
                         max_dt[j]=2*dt*Ndt[k]
-            lin,=ax.plot(degree,degree/max_dt,linewidth=2,linestyle=line[count_high_order],alpha=0.9,color=color[i],zorder=5*i)
-            ax.scatter(degree,degree/max_dt, linewidth=2,marker=marker[i],alpha=0.5,color=color[i],zorder=5*i)
+            max_dt[max_dt==0]=float('nan')
+            aux=np.log10(degree/max_dt)
+            lin,=ax.plot(degree[aux>=0],aux[aux>=0],linewidth=2,linestyle=line[count_high_order],alpha=0.9,color=color[i],zorder=5*i)
+            ax.scatter(degree[aux>=0],aux[aux>=0], linewidth=2,marker=marker[i],alpha=0.5,color=color[i],zorder=5*i)
             # ax.scatter(degree,degree/max_dt,marker=marker[i],color=color1[i],s=5)
             # ax.plot([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
             ax.plot([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
             count_high_order+=1
 
-    plt.xticks(fontsize=19)
-    plt.yticks(fontsize=19)
-    plt.legend(fontsize=20)
-    plt.ylabel(r'$N^{\Delta t}_{op}$',fontsize=20)
-    plt.xlabel('# Stages',fontsize=20)
-    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.95)
-    plt.savefig(str(example)+'/methods_eff'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'.pdf')
-    plt.show()
+    y_ticks_position=np.linspace(ax.get_ylim()[0],ax.get_ylim()[1],7)
+    y_ticks_labels=np.char.add([r"%.1f$\cdot$" % pow(10,math.modf(x)[0]) for x in y_ticks_position],[r"$10^{%.0f}$" % int(math.modf(x)[1]) for x in y_ticks_position])
+    ax.set_yticks(y_ticks_position)
+    ax.set_yticklabels(y_ticks_labels)
+    plt.xticks(fontsize=21)
+    plt.yticks(fontsize=21)
+    plt.ylabel(r'$N^{\Delta t}_{op}$',fontsize=24)
+    plt.xlabel('# Stages',fontsize=22)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.subplots_adjust(left=0.24, bottom=0.15, right=0.95, top=0.95)
+    plt.savefig(str(example)+'_images/'+example+'_methods_eff'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'_'+time_space+'.pdf')
+    # plt.show()
+    plt.clf()
 
 
-def graph_methods_error(example,dim,ord,equ,delta,ind_source,Ndt,degree,dx):
+def graph_methods_mem(example,methods,Ndt,degree,T,time_space,equ='scalar_dx2',free_surf=1,dx=0.01,ord='8',dim=2,delta=0.8,no_PML=True,ind_source='H_amplified',tol=1e-5,fig_ind=''):
+    # graphics of the maximum \Delta t allowed by methods and approximation degrees at a given numerical experiment
+
+    # INPUT:
+    # methods: the different methods we will consider (vector string)
+    # example: selection of the wave equation parameters (string)
+    # ord: spatial discretization order ('4','8')
+    # equ: equation formulation (scalar, scalar_dx2, elastic)
+    # ind_source: indicator of the wave equations' source term treatment ('H_amplified', 'FA_ricker')
+    # max_degree: maximum polynomial degree used to graphic (int)
+    # dx: spatial discretization step size (float)
+    # ind: string used to put in the figure name, for saving
+    # Ndt: amount of time-step sizes used to compute the solutions (int)
+
+    sol_ref=sol_ref_load(example,equ,free_surf,ord,dx,delta,no_PML,time_space)
+    a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
+
+    color=np.array(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2','#7f7f7f', '#bcbd22', '#17becf'])
+    # names_prov=np.array(['FA','HORK','KRY','RK9-7','RK3-2','RK4-4','Leap frog'])
+    names_prov=dis.method_label_graph(methods)
+    marker=np.array(['D','o','s','v','P','H','D'])
+    line=np.array(['-','--','-.'])
+    count_high_order=0
+    plt.rcParams["figure.figsize"] = [7.5,5]
+    ax=plt.gca()
+    for i in range(len(methods)):
+        meth_ind,meth_label=dis.method_label(methods[i])
+        if meth_ind<10:
+            max_dt=0
+            for j in range(len(Ndt)):
+                sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[j],nx,ny)
+                error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=Ndt[j])
+                if error>tol or math.isnan(error):
+                    break
+                else:
+                    max_dt=2*dt*Ndt[j]
+            ax.scatter(meth_ind,np.log10(T/max_dt), linewidth=2,marker=marker[i],alpha=0.5,color=color[i],s=60,zorder=5*i)
+            ax.scatter(meth_ind,np.log10(T/max_dt),marker=marker[i],color=color[i],s=30,zorder=5*i)
+            # ax.scatter([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
+            ax.scatter([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],zorder=5*i)
+        else:
+            max_dt=np.zeros(len(degree))
+            for j in range(len(degree)):
+                cont_miss=0     # counting missing files
+                for k in range(len(Ndt)):
+                    try:
+                        sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,time_space,Ndt[k],nx,ny,degree=degree[j],ind_source=ind_source)
+                    except:
+                        cont_miss+=1
+                        if cont_miss>20:
+                            max_dt[j]=float('nan')
+                            break
+                        continue
+                    error=error_norm(sol,sol_ref,time_space,dim,dx,dt,Ndt=Ndt[k])
+                    if error>tol or math.isnan(error):
+                        break
+                    else:
+                        max_dt[j]=2*dt*Ndt[k]
+            max_dt[max_dt==0]=float('nan')
+            aux=np.log10(T/max_dt)
+            lin,=ax.plot(degree[aux>=0],aux[aux>=0],linewidth=2,linestyle=line[count_high_order],alpha=0.9,color=color[i],zorder=5*i)
+            ax.scatter(degree[aux>=0],aux[aux>=0], linewidth=2,marker=marker[i],alpha=0.5,color=color[i],zorder=5*i)
+            # ax.scatter(degree,degree/max_dt,marker=marker[i],color=color1[i],s=5)
+            # ax.plot([],[],label=methods[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
+            ax.plot([],[],label=names_prov[i],color=color[i],linewidth=2,marker=marker[i],linestyle=line[count_high_order],zorder=5*i)
+            count_high_order+=1
+
+    y_ticks_position=np.linspace(ax.get_ylim()[0],ax.get_ylim()[1],7)
+    y_ticks_labels=np.char.add([r"%.1f$\cdot$" % pow(10,math.modf(x)[0]) for x in y_ticks_position],[r"$10^{%.0f}$" % int(math.modf(x)[1]) for x in y_ticks_position])
+    ax.set_yticks(y_ticks_position)
+    ax.set_yticklabels(y_ticks_labels)
+    plt.xticks(fontsize=21)
+    plt.yticks(fontsize=21)
+    # plt.legend(fontsize=20)
+    # ax.set_yscale('log')
+    plt.ylabel(r'$N^{\Delta t}_{mem}$',fontsize=24)
+    plt.xlabel('# Stages',fontsize=22)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.subplots_adjust(left=0.24, bottom=0.15, right=0.95, top=0.95)
+    plt.savefig(str(example)+'_images/'+example+'_methods_memory'+fig_ind+'_equ_'+equ+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_dx_'+str(dx)+'_'+time_space+'.pdf')
+    # plt.show()
+    plt.clf()
+
+
+def graph_methods_error(example,dim,equ,delta,ind_source,Ndt,degree,dx=0.01,ord='8'):
 
     error_low_order=np.zeros(4)
     error_faber=np.zeros(len(degree))
@@ -566,7 +769,25 @@ def graph_methods_error(example,dim,ord,equ,delta,ind_source,Ndt,degree,dx):
     plt.show()
 
 
-def graph_velocities(example,dx,delta,equ):
+def graph_PML(delta,X,Y,example,free_surf):
+    # drawing the limits of the PML domain
+    if free_surf==0:
+        plt.plot(np.array([delta,delta]),np.array([delta,np.max(Y)-delta]),'k',linestyle='--')
+        plt.plot(np.array([np.max(X)-delta,np.max(X)-delta]),np.array([delta,np.max(Y)-delta]),'k',linestyle='--')
+        plt.plot(np.array([delta,np.max(X)-delta]),np.array([delta,delta]),'k',linestyle='--')
+        plt.plot(np.array([delta,np.max(X)-delta]),np.array([np.max(Y)-delta,np.max(Y)-delta]),'k',linestyle='--')
+    else:
+        if '2D_heterogeneous_' in example:
+            plt.plot(np.array([delta,delta]),np.array([np.min(Y),np.max(Y)-delta]),'k',linestyle='--')
+            plt.plot(np.array([np.max(X)-delta,np.max(X)-delta]),np.array([np.min(Y),np.max(Y)-delta]),'k',linestyle='--')
+            plt.plot(np.array([delta,np.max(X)-delta]),np.array([np.max(Y)-delta,np.max(Y)-delta]),'k',linestyle='--')
+        else:
+            plt.plot(np.array([np.min(X)+delta,np.min(X)+delta]),np.array([np.min(Y),np.max(Y)-delta]),'k',linestyle='--')
+            plt.plot(np.array([np.max(X)-delta,np.max(X)-delta]),np.array([np.min(Y),np.max(Y)-delta]),'k',linestyle='--')
+            plt.plot(np.array([np.min(X)+delta,np.max(X)-delta]),np.array([np.max(Y)-delta,np.max(Y)-delta]),'k',linestyle='--')
+
+
+def graph_velocities(example,dx=0.01,delta=0.8,equ='scalar',free_surface=1):
     # graph of the velocity medium with PML boundary
 
     # INPUT
@@ -581,12 +802,14 @@ def graph_velocities(example,dx,delta,equ):
 
     a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
 
-    b= -b
-    extent = [0,a, b,0]
+    if '2D_heterogeneous_' not in example:
+        Y=-Y
+    extent = [np.min(X),np.max(X),np.max(Y), np.min(Y)]
+    print('extent',extent)
 
     if equ!='elastic':
         param=param.reshape((ny,nx),order='F')
-        fig=plt.imshow(param,extent=extent)
+        fig=plt.imshow(param,extent=extent, aspect='auto')
         plt.xlabel('X Position [km]',fontsize=20)
         plt.ylabel('Depth [km]',fontsize=20)
         plt.xticks(fontsize=19)
@@ -596,20 +819,19 @@ def graph_velocities(example,dx,delta,equ):
         cbar.ax.tick_params(labelsize=15)
         plt.grid()
 
-        print(x0)
-        print(y0)
+        print('x0',x0)
+        print('y0',y0)
         # drawing the point where the source term is located
-        plt.plot(x0,-y0,'ok')
+        if '2D_heterogeneous_' in example:
+            plt.plot(x0,np.max(Y)-y0,'ok')
+        else:
+            plt.plot(x0,-y0,'ok')
 
-        # drawing the limits of the PML domain
-        plt.plot(np.array([delta,delta]),np.array([delta,b-delta]),'k')
-        plt.plot(np.array([a-delta,a-delta]),np.array([delta,b-delta]),'k')
-        plt.plot(np.array([delta,a-delta]),np.array([delta,delta]),'k')
-        plt.plot(np.array([delta,a-delta]),np.array([b-delta,b-delta]),'k')
+        graph_PML(delta,X,Y,example,free_surface)
 
         # saving and showing the picture
         plt.tight_layout()
-        plt.savefig(example+'/vel_map.pdf')
+        plt.savefig(example+'_images/'+example+'_vel_map.pdf')
         plt.show()
     else:
         # p-wave velocity
@@ -622,8 +844,8 @@ def graph_velocities(example,dx,delta,equ):
         cbar.set_label('Velocity [km/s]')
         plt.grid()
 
-        print(x0)
-        print(y0)
+        print('x0',x0)
+        print('y0',y0)
         # drawing the point where the source term is located
         plt.plot(x0,b-y0,'ok')
 
@@ -634,7 +856,7 @@ def graph_velocities(example,dx,delta,equ):
         plt.plot(np.array([delta,a-delta]),np.array([b-delta,b-delta]),'k')
 
         # saving and showing the picture
-        plt.savefig(example+'/vel_P_map.pdf')
+        plt.savefig(example+'_images/vel_P_map.pdf')
         plt.show()
 
         # s-wave velocity
@@ -660,7 +882,7 @@ def graph_velocities(example,dx,delta,equ):
 
         # saving and showing the picture
         # plt.subplots_adjust(left=0.3, right=0.9, bottom=0.3, top=0.9)
-        plt.savefig(example+'/vel_P_map.pdf')
+        plt.savefig(example+'_images/vel_P_map.pdf')
         plt.show()
 
 
@@ -685,7 +907,15 @@ def sources_acoustic_1D(Ndt,T,degree,example,point):
     plt.plot(np.linspace(0,T,RK_ref_points.shape[0]),sol_2time_points[:,point])
 
 
-def snapshot_method(example,dx,equ,degree,method,ord='8',free_surf=1,Ndt_0=1,delta=0.8,ind_source='H_amplified'):
+def graph_physical(sol,extent,delta,dx,free_surf,cmap='viridis'):
+    pml_thick=int(delta/dx)
+    if free_surf==1:
+        plt.imshow(sol[pml_thick:-pml_thick,:-pml_thick],extent=extent,alpha=0.85,aspect='auto',cmap=cmap)
+    else:
+        plt.imshow(sol[pml_thick:-pml_thick,pml_thick:-pml_thick],extent=extent,alpha=0.85,aspect='auto',cmap=cmap)
+
+
+def snapshot_method(example,equ,method,degree=0,dx=0.01,ord='8',free_surf=1,Ndt_0=1,delta=0.8,ind_source='H_amplified',snapshot_type='pml'):
     # graph of the velocity medium with PML boundary
 
     # INPUT
@@ -700,12 +930,23 @@ def snapshot_method(example,dx,equ,degree,method,ord='8',free_surf=1,Ndt_0=1,del
 
     a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
 
-    extent = [0,a, -b,0]
+    if '2D_heterogeneous_' not in example:
+        Y=-Y
+    if snapshot_type!='physical':
+        extent = [np.min(X),np.max(X),np.max(Y), np.min(Y)]
+    else:
+        if free_surf==0:
+            extent = [np.min(X)+delta,np.max(X)-delta,np.max(Y)-delta, np.min(Y)+delta]
+        else:
+            extent = [np.min(X)+delta,np.max(X)-delta,np.max(Y)-delta, np.min(Y)]
 
     # background velocity field
     if equ!='elastic':
         param=param.reshape((ny,nx),order='F')
-        plt.imshow(np.sqrt(param),extent=extent,cmap='gray',aspect='auto')
+        if snapshot_type=='physical':
+            graph_physical(np.sqrt(param),extent,delta,dx,free_surf,cmap='gray')
+        else:
+            plt.imshow(np.sqrt(param),extent=extent,cmap='gray',aspect='auto')
         plt.xlabel('X Position [km]',fontsize=20)
         plt.ylabel('Depth [km]',fontsize=20)
         plt.xticks(fontsize=19)
@@ -735,24 +976,32 @@ def snapshot_method(example,dx,equ,degree,method,ord='8',free_surf=1,Ndt_0=1,del
     print(np.min(sol))
 
     # construction of the wave snapshot at the final time instant
-    fig=plt.imshow(sol,extent=extent,alpha=0.84,aspect='auto')# ,vmin=-5*pow(10,-6),vmax=5*pow(10,-6)
+    # fig=plt.imshow(sol,extent=extent,alpha=0.85,aspect='auto')# ,vmin=-5*pow(10,-6),vmax=5*pow(10,-6)
+    if snapshot_type=='physical':
+        graph_physical(sol,extent,delta,dx,free_surf,cmap='viridis')
+    else:
+        plt.imshow(sol,extent=extent,alpha=0.85,aspect='auto')
+    if snapshot_type == 'pml':
+        graph_PML(delta,X,Y,example,free_surf)
+
     plt.xlabel('X Position [km]',fontsize=20)
     plt.ylabel('Depth [km]',fontsize=20)
-    cbar=plt.colorbar(fig)
+    # cbar=plt.colorbar(fig)
+    cbar=plt.colorbar()
     cbar.set_label('Displacement [km]',fontsize=20)
     cbar.ax.tick_params(labelsize=15)
-    cbar.ax.yaxis.get_offset_text().set(size=13)
+    cbar.ax.yaxis.get_offset_text().set(size=15)
     plt.xticks(fontsize=19)
     plt.yticks(fontsize=19)
     # plt.plot(np.array([x0_pos*dx,x0_pos*dx]),np.array([0,8]),'k')
     # plt.gca().set_aspect(1.7, adjustable='box')
     plt.draw()
     plt.tight_layout()
-    plt.savefig(example+'/snapshot_method_'+method+'free_surf'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'.pdf')
+    plt.savefig(example+'_images/'+example+'_snapshot_method_'+method+'_free_surf'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'.pdf')
     plt.show()
 
 
-def snapshot_method_error(example,dx,equ,degree,method,ord='8',free_surf=1,Ndt_0=1,delta=0.8,ind_source='H_amplified'):
+def snapshot_method_error(example,equ,degree,method,dx=0.01,ord='8',free_surf=1,Ndt_0=1,delta=0.8,ind_source='H_amplified'):
     # graph of the velocity medium with PML boundary
 
     # INPUT
@@ -810,18 +1059,18 @@ def snapshot_method_error(example,dx,equ,degree,method,ord='8',free_surf=1,Ndt_0
     cbar=plt.colorbar(fig)
     cbar.set_label('Displacement [km]',fontsize=20)
     cbar.ax.tick_params(labelsize=15)
-    cbar.ax.yaxis.get_offset_text().set(size=13)
+    cbar.ax.yaxis.get_offset_text().set(size=15)
     plt.xticks(fontsize=19)
     plt.yticks(fontsize=19)
     # plt.plot(np.array([x0_pos*dx,x0_pos*dx]),np.array([0,8]),'k')
     # plt.gca().set_aspect(1.7, adjustable='box')
     plt.draw()
     plt.tight_layout()
-    plt.savefig(example+'/snapshot_method_'+method+'free_surf'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'.pdf')
+    plt.savefig(example+'_images/snapshot_method_'+method+'free_surf'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'.pdf')
     plt.show()
 
 
-def seismogram(example,dim,dx,delta,equ,ord,ind_source,Ndt_0,degree,method,free_surf,T):
+def seismogram(example,delta,T,dim='2',no_PML=True,equ='scalar_dx2',ord='8',ind_source="H_amplified",Ndt_0=1,degree=0,method='RK7',free_surf=1,dx=0.01):
     # graph of the seismogram
 
     # INPUT
@@ -836,25 +1085,16 @@ def seismogram(example,dim,dx,delta,equ,ord,ind_source,Ndt_0,degree,method,free_
 
     a,b,nx,ny,X,Y,param,dt,x0,y0=aux_fun.domain_examples(example,dx,delta,equ)
 
-    extent = [0,a, T,0]
+    if no_PML:
+        extent = [np.min(X)+delta,np.max(X)-delta, T,0]
+    else:
+        extent = [np.min(X),np.max(X), T,0]
 
-    if method=='RK7':
-        sol=np.load(str(example)+'/RK_ref_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'_points.npy')
-    elif method=='RK2':
-        sol=np.load(str(example)+'/sol_rk2_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'_points.npy')
-    elif method=='RK4':
-        sol=np.load(str(example)+'/sol_rk4_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'_points.npy')
-    elif method=='2MS':
-        sol=np.load(str(example)+'/sol_2MS_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt_0)+'_dx_'+str(dx)+'_points.npy')
-    elif method=='FA':
-        sol=np.load(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_points__Ndt_'+str(Ndt_0)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
-    elif method=='HORK':
-        sol=np.load(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt_0)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
-    elif method=='KRY':
-        sol=np.load(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt_0)+'_degree_'+str(degree)+'_dx_'+str(dx)+'.npy')
+    meth_ind,meth_label=dis.method_label(method)
+    sol=sol_load(example,meth_ind,meth_label,equ,free_surf,ord,dx,delta,no_PML,'time',Ndt_0,nx,ny)
 
     # construction of the wave snapshot at the final time instant
-    fig=plt.imshow(pow(np.abs(sol),1/3)*np.sign(sol),extent=extent,cmap='gray')# ,vmin=-5*pow(10,-6),vmax=5*pow(10,-6)
+    fig=plt.imshow(pow(np.abs(sol),1/3)*np.sign(sol),extent=extent,cmap='gray',aspect='auto')# ,vmin=-5*pow(10,-6),vmax=5*pow(10,-6)
     plt.xlabel('X Position [km]',fontsize=20)
     plt.ylabel('Time [s]',fontsize=20)
     # cbar=plt.colorbar(fig)
@@ -865,56 +1105,5 @@ def seismogram(example,dim,dx,delta,equ,ord,ind_source,Ndt_0,degree,method,free_
     plt.yticks(fontsize=19)
     plt.draw()
     plt.tight_layout()
-    plt.savefig(example+'/seismogram_method_'+method+'free_surf'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'.pdf')
+    plt.savefig(example+'_images/'+example+'_seismogram_method_'+method+'_free_surf_'+str(free_surf)+'_Ndt_'+str(Ndt_0)+'.pdf')
     plt.show()
-
-
-# --------------------------------------------------------------------------------------------------------
-# Graphics of convergence error and its dependence with the time step size, with the examples of the paper
-# --------------------------------------------------------------------------------------------------------
-
-# error_acoustic(Ndt=40,example='1D_heterogeneous_1a',dim=1,dx=0.002,c2_max=1.524**2,equ='scalar',ord='4',ind_source='H_amplified')
-# error_acoustic(Ndt=29,example='2D_heterogeneous_2',dim=2,dx=0.04,c2_max=6**2,equ='scalar_dx2',ord='4',ind_source='H_amplified')
-# error_acoustic(Ndt=40,example='2D_heterogeneous_3',dim=2,dx=0.03125,c2_max=((4.5+18)/0.25),equ='elastic',ord='8',ind_source='H_amplified')
-
-
-# ------------------------------------------------------------------------
-# Comparisson graphics of maximum time step size, \Delta t, and efficiency
-# (functions graph_experiments and eff_graph_experiments, with the paper test cases)
-# ------------------------------------------------------------------------
-
-# example=np.array(['2D_homogeneous_0a','2D_homogeneous_0a','2D_heterogeneous_3a','2D_heterogeneous_3a'])
-# ord=np.array(['4','4','4','4'])
-# equ=np.array(['scalar','scalar_dx2','scalar','scalar_dx2'])
-# c2_max=np.array([3,3,6,6])
-# graph_experiments_dt_max(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=30-3,dx=0.02,c2_max=c2_max,ind='Tests45_ord4',Ndt=29)
-# eff_graph_experiments(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=30-3,dx=0.02,c2_max=c2_max,ind='Tests45_ord4',Ndt=29)
-#
-#
-# example=np.array(['1D_homogeneous_0','1D_homogeneous_0','1D_heterogeneous_2','1D_heterogeneous_2'])
-# ord=np.array(['8','8','8','8'])
-# equ=np.array(['scalar','scalar_dx2','scalar','scalar_dx2'])
-# c2_max=np.array([1.524,1.524,3.048,3.048])
-# graph_experiments_dt_max(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=35-3,dx=0.0025,c2_max=c2_max,ind='Tests13_ord8',Ndt=40)
-# eff_graph_experiments(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=35-3,dx=0.0025,c2_max=c2_max,ind='Tests13_ord8',Ndt=40)
-#
-# example=np.array(['2D_heterogeneous_3','2D_heterogeneous_3'])
-# ord=np.array(['4','8'])
-# equ=np.array(['elastic','elastic'])
-# c2_max=np.array([np.sqrt((4.5+18)/0.25),np.sqrt((4.5+18)/0.25)])
-# graph_experiments_dt_max(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=25-3,dx=0.03125,c2_max=c2_max,ind='Test7_ord48',Ndt=40)
-# eff_graph_experiments(example=example,ord=ord,equ=equ,ind_source="H_amplified",max_degree=25-3,dx=0.03125,c2_max=c2_max,ind='Test7_ord48',Ndt=40)
-
-
-# -----------------------------------------------------------
-# Graphics of the examples' velocity field and source position
-# -----------------------------------------------------------
-
-# graph_velocities(example='2D_heterogeneous_3',dx=0.02,delta=0.8,equ='scalar')
-
-
-# --------------------------------------------------
-# spatial error and snapshot of the wave propagation
-# --------------------------------------------------
-
-# spatial_error(example='2D_heterogeneous_3',equ='scalar',ord='8',ind_source='H_amplified',dx=0.02,nx=400,ny=400,x0_pos=300,Ndt_0=11,dephs_y=8,degree=np.arange(11,19))

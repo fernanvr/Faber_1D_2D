@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import mpmath as mp
 import sympy as sym
@@ -7,11 +8,10 @@ from scipy import special
 from scipy import linalg
 from scipy import interpolate
 from time import time
-import os
 try:
     import segyio
 except:
-    print('np segyio')
+    print('np segyio is not installed')
 # import segyio
 
 
@@ -55,8 +55,10 @@ def domain_examples(example,dx,delta,equ):
     elif example[0]=='2': # 2D sintetic examples
 
         # domain dimensions and amount of points
-        a=4
-        b=4
+        # a=4
+        # b=4
+        a=4+2*delta
+        b=4+delta
         nx=int(round(a/dx))
         ny=int(round(b/dx))
         print('nx: ',nx)
@@ -80,7 +82,8 @@ def domain_examples(example,dx,delta,equ):
         else:
             param=np.zeros((ny,nx))+9
         if example[3:5]=='he':
-            cut_pos=int(b/2/dx)
+            # cut_pos=int(b/2/dx)
+            cut_pos=int((b-delta)/2/dx)
             if equ=='elastic':
                 param[2,cut_pos:,:]=1.5
                 param[3,cut_pos:,:]=1.5
@@ -88,8 +91,10 @@ def domain_examples(example,dx,delta,equ):
             else:
                 param[cut_pos:,:]=36
             if example[17]=='3':
-                cut_pos_y=int(2*b/3/dx)
-                cut_pos_x=int(3/4*a/dx)
+                # cut_pos_y=int(2*b/3/dx)
+                # cut_pos_x=int(3/4*a/dx)
+                cut_pos_y=int(3.5*b/6/dx)
+                cut_pos_x=int(2/3*a/dx)
                 if equ=='elastic':
                     param[2,cut_pos_y:,(cut_pos_x+1):]=2.25
                     param[3,cut_pos_y:,cut_pos_x:]=2.25
@@ -814,7 +819,7 @@ def ini_var0_2MS(var0,nx,ny,dim,delta):
         return var
 
 
-def method_time_2steps(var0,Ndt,Nt,dt,T_frac_snapshot,nx,ny,dx,c2,source_type,f,param_ricker,equ,dim,free_surf,delta,beta0,ord,points,example,i):
+def method_time_2steps(var0,Ndt,Nt,dt,T_frac_snapshot,nx,ny,dx,c2,source_type,f,param_ricker,equ,dim,free_surf,delta,beta0,ord,points,example):
     # computation of the Leapfrog solution at the last time instant
 
     # declaration of the array saving the solution at fixed points for all time instants
@@ -831,7 +836,6 @@ def method_time_2steps(var0,Ndt,Nt,dt,T_frac_snapshot,nx,ny,dx,c2,source_type,f,
         sol_2time_points[j,:]=var[points,0]
 
         # calculating the solution in the next time instant
-
         var1=time_step_2MS(var0,var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,dt,f,j*dt,param_ricker,source_type)
 
         var0=var+0
@@ -858,6 +862,9 @@ def minus1_step_2MS(var0,dx,nx,dt,c2,f,example):
         var_minus1=np.expand_dims(f[:,0]*(np.exp(-dt)-1),axis=1)
     elif example[0]=='2' and example[-1]=='1':
         var_minus1=np.expand_dims(f[:,2]*f[:,5]*np.cos(f[:,6]-dt)*np.sin(5*f[:,7]+7*dt),axis=1)
+    elif example=="Dispersion_S" and os.path.isfile('Dispersion_S/2MS_minus1.npy'):
+        var_minus1=np.load('Dispersion_S/2MS_minus1.npy')
+        os.remove('Dispersion_S/2MS_minus1.npy')
     else:
         var_minus1=var0*0
 
@@ -879,10 +886,16 @@ def time_step_2MS(var0,var,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,dt,f,t,
             var1[nx:]=4*var[nx:]-3*var0[nx:]-2*dt*(aux[nx:])
         else:
             var1[:nx*ny]=2*var[:nx*ny]-var0[:nx*ny]-dt*(op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,1,0,free_surf)+op.beta_i(dim,dx,nx+1,ny+1,delta,beta0,2,0,free_surf))*(var[:nx*ny]-var0[:nx*ny])\
-                         +dt**2*(aux[:nx*ny]+source_xt(f,t,param_ricker,str(source_type)))
-            var1[nx*ny:2*nx*ny]=var[nx*ny:2*nx*ny]+dt*aux[nx*ny:2*nx*ny]
-            var1[2*nx*ny:]=var[2*nx*ny:]+dt*aux[2*nx*ny:]
-            # this 1rst order approximation is unstable
+                         +dt**2*(aux[:nx*ny]+source_xt(f,t,param_ricker,str(source_type)+'_2MS'))
+            # First order variation
+            # var1[nx*ny:2*nx*ny]=var[nx*ny:2*nx*ny]+dt*aux[nx*ny:2*nx*ny]
+            # var1[2*nx*ny:]=var[2*nx*ny:]+dt*aux[2*nx*ny:]
+
+            # Leap-frog first order variation
+            var1[nx*ny:2*nx*ny]=var0[nx*ny:2*nx*ny]+2*dt*aux[nx*ny:2*nx*ny]
+            var1[2*nx*ny:]=var0[2*nx*ny:]+2*dt*aux[2*nx*ny:]
+
+            # this 2nd order approximation is unstable
             # var1[nx*ny:2*nx*ny]=4*var[nx*ny:2*nx*ny]-3*var0[nx*ny:2*nx*ny]-2*dt*(aux[nx*ny:2*nx*ny])
             # var1[2*nx*ny:]=4*var[2*nx*ny:]-3*var0[2*nx*ny:]-2*dt*(aux[2*nx*ny:])
 
@@ -1139,7 +1152,7 @@ def ssprk_alpha(mu,grau):
     return alpha
 
 
-def RK_op(var,mu,dt,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,grau,u_k):
+def RK_op(var,mu,dt,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,grau,u_k,ind_source='H_amplified'):
 
     alpha=np.array(ssprk_alpha(mu,grau).tolist(),dtype=np.float_)
     approx = var*alpha[0]
@@ -1147,14 +1160,13 @@ def RK_op(var,mu,dt,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,grau,u_k):
     aux=var#*mp.exp(0)
 
     for i in range(1,grau-1):
-        aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
-        # if delta>0:
-        #     aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
-        # else:
-        #     aux=aux+mu*dt*op.op_H(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny)
+        if ind_source=='H_amplified':
+            aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
+        else:
+            aux=aux+mu*dt*op.op_H(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny)
         approx=approx+aux*alpha[i]
 
-    if delta>0:
+    if ind_source=='H_amplified':
         aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
         aux=aux+mu*dt*op.op_H_extended(aux,equ,dim,free_surf,delta,beta0,ord,dx,c2,nx,ny,u_k)
     else:
@@ -1199,19 +1211,19 @@ def krylov_op(var,degree,dt,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k
     Hm=np.zeros((degree+1,degree+1))
 
     for i in range(degree+1):
-        # start=time()
         w=op.op_H_extended(np.expand_dims(Vm[:,i],axis=1),equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k)[:,0]*dt
-        # print("time 1:",time()-start)
-        # start=time()
         for j in range(i+1):
             Hm[j,i]=np.dot(w,Vm[:,j])
             w=w-Hm[j,i]*Vm[:,j]
         if i<degree:
             Hm[i+1,i]=np.linalg.norm(w,2)
             Vm[:,i+1]=w/Hm[i+1,i]
-        # print("time 2:",time()-start)
 
-    return np.linalg.norm(var[:,0],2)*Vm.dot(np.expand_dims(linalg.expm(Hm)[:,0],axis=1))
+    try:
+        return np.linalg.norm(var[:,0],2)*Vm.dot(np.expand_dims(linalg.expm(Hm)[:,0],axis=1))
+    except:
+        # return np.linalg.norm(var[:,0],2)*Vm.dot(np.expand_dims(linalg.expm(Hm*0)[:,0],axis=1))
+        return var*float("nan")
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny):
+def op_H(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny):
 
     result=np.zeros((len(var),1))
     if equ=='scalar':
@@ -77,21 +77,21 @@ def op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny):
             result[:aux]=var[aux:2*aux]
 
             # velocity equations v_i
-            result[aux:2*aux]=param*(dp2x_2D(var[:aux],dx,1,ord,nx,ny)+dp2x_2D(var[:aux],dx,2,ord,nx,ny))
+            result[aux:2*aux]=param*(dp2x_2D(var[:aux],dx,1,ord,nx,ny,free_surf)+dp2x_2D(var[:aux],dx,2,ord,nx,ny,free_surf))
 
             if delta!=0:
 
-                beta10=beta_i(dim,dx,nx,ny,delta,beta0,1,2)
-                beta11=beta_i(dim,dx,nx,ny,delta,beta0,1,1)
-                beta20=beta_i(dim,dx,nx,ny,delta,beta0,2,2)
-                beta21=beta_i(dim,dx,nx,ny,delta,beta0,2,1)
+                beta10=beta_i(dim,dx,nx,ny,delta,beta0,1,2,free_surf)
+                beta11=beta_i(dim,dx,nx,ny,delta,beta0,1,1,free_surf)
+                beta20=beta_i(dim,dx,nx,ny,delta,beta0,2,2,free_surf)
+                beta21=beta_i(dim,dx,nx,ny,delta,beta0,2,1,free_surf)
 
                 # velocity equations v_i
-                result[aux:2*aux]=result[aux:2*aux]+param*(dpx_2D(var[2*aux:3*aux],dx,1,1,ord,nx,ny)+dpx_2D(var[3*aux:4*aux],dx,2,1,ord,nx,ny))-(beta10+beta20)*var[aux:2*aux]-beta10*beta20*var[:aux]
+                result[aux:2*aux]=result[aux:2*aux]+param*(dpx_2D(var[2*aux:3*aux],dx,1,1,ord,nx,ny,free_surf)+dpx_2D(var[3*aux:4*aux],dx,2,1,ord,nx,ny,free_surf))-(beta10+beta20)*var[aux:2*aux]-beta10*beta20*var[:aux]
 
                 # auxiliari variables equations
-                result[2*aux:3*aux]=-beta11*var[2*aux:3*aux]+(beta20-beta11)*dpx_2D(var[:aux],dx,1,2,ord,nx,ny)
-                result[3*aux:]=-beta21*var[3*aux:4*aux]+(beta10-beta21)*dpx_2D(var[:aux],dx,2,2,ord,nx,ny)
+                result[2*aux:3*aux]=-beta11*var[2*aux:3*aux]+(beta20-beta11)*dpx_2D(var[:aux],dx,1,2,ord,nx,ny,free_surf)
+                result[3*aux:]=-beta21*var[3*aux:4*aux]+(beta10-beta21)*dpx_2D(var[:aux],dx,2,2,ord,nx,ny,free_surf)
     elif equ=='elastic':
         # in the elastic case, 1D is equal to 1D acoustic, so we don't consider 1D elastic
 
@@ -131,12 +131,12 @@ def op_H(var,equ,dim,delta,beta0,ord,dx,param,nx,ny):
     return result
 
 
-def op_H_extended(var,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k):
+def op_H_extended(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,u_k):
 
     result=np.zeros((len(var),1))
 
     p=u_k.shape[1]
-    result[:-p]=op_H(var[:-p],equ,dim,delta,beta0,ord,dx,param,nx,ny)
+    result[:-p]=op_H(var[:-p],equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny)
     for i in range(p):
         if var[len(var)-1-i]!=0:
             result[:(len(var)-p),0]=result[:(len(var)-p),0]+u_k[:,i]*var[len(var)-1-i]
@@ -145,9 +145,9 @@ def op_H_extended(var,equ,dim,delta,beta0,ord,dx,param,nx,ny,u_k):
     return result
 
 
-def op_H_2ord(var,equ,dim,delta,beta0,ord,dx,param,nx,ny):
+def op_H_2ord(var,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny):
     result=np.zeros((len(var),1))
-    if equ=='scalar':
+    if equ=='scalar_dx2':
         if dim==1:
             aux=(nx-1)
 
@@ -166,16 +166,21 @@ def op_H_2ord(var,equ,dim,delta,beta0,ord,dx,param,nx,ny):
             aux=(nx-1)*(ny-1)
 
             # scalar wave field equations u
-            result[:aux]=param*(dp2x_2D(var[:aux],dx,1,ord,nx,ny)+dp2x_2D(var[:aux],dx,2,ord,nx,ny))
+            result[:aux]=param*(dp2x_2D(var[:aux],dx,1,ord,nx,ny,free_surf)+dp2x_2D(var[:aux],dx,2,ord,nx,ny,free_surf))
 
             if delta!=0:
 
+                beta10=beta_i(dim,dx,nx,ny,delta,beta0,1,2,free_surf)
+                beta11=beta_i(dim,dx,nx,ny,delta,beta0,1,1,free_surf)
+                beta20=beta_i(dim,dx,nx,ny,delta,beta0,2,2,free_surf)
+                beta21=beta_i(dim,dx,nx,ny,delta,beta0,2,1,free_surf)
+
                 # scalar wave field equations u
-                result[:aux]=result[:aux]-beta_i(dim,dx,nx,ny,delta,beta0,1,0)*beta_i(dim,dx,nx,ny,delta,beta0,2,0)*var[:aux]+param*(dpx_2D(var[aux:2*aux],dx,1,1,ord,nx,ny)+dpx_2D(var[2*aux:3*aux],dx,2,1,ord,nx,ny))
+                result[:aux]=result[:aux]-beta10*beta20*var[:aux]+param*(dpx_2D(var[aux:2*aux],dx,1,1,ord,nx,ny,free_surf)+dpx_2D(var[2*aux:3*aux],dx,2,1,ord,nx,ny,free_surf))
 
                 # auxiliar variables
-                result[aux:2*aux]=-beta_i(dim,dx,nx,ny,delta,beta0,1,1)*var[aux:2*aux]+(beta_i(dim,dx,nx,ny,delta,beta0,1,1)-beta_i(dim,dx,nx,ny,delta,beta0,2,0))*dpx_2D(var[:aux],dx,1,2,ord,nx,ny)
-                result[2*aux:3*aux]=-beta_i(dim,dx,nx,ny,delta,beta0,2,1)*var[2*aux:3*aux]+(beta_i(dim,dx,nx,ny,delta,beta0,2,1)-beta_i(dim,dx,nx,ny,delta,beta0,1,0))*dpx_2D(var[:aux],dx,2,2,ord,nx,ny)
+                result[aux:2*aux]=-beta11*var[aux:2*aux]+(beta20-beta11)*dpx_2D(var[:aux],dx,1,2,ord,nx,ny,free_surf)
+                result[2*aux:3*aux]=-beta21*var[2*aux:3*aux]+(beta10-beta21)*dpx_2D(var[:aux],dx,2,2,ord,nx,ny,free_surf)
 
     return result
 
@@ -208,7 +213,7 @@ def dp2x_1D(var,dx,ord):
     return result/dx**2
 
 
-def dp2x_2D(var,dx,dir,ord,nx,ny):
+def dp2x_2D(var,dx,dir,ord,nx,ny,free_surf):
     result=var*0
     if ord=='4':
         if dir==1:
@@ -242,10 +247,16 @@ def dp2x_2D(var,dx,dir,ord,nx,ny):
             result[(nx-2)*(ny-1):(nx-1)*(ny-1)]=coeff[0]*var[(nx-2)*(ny-1):(nx-1)*(ny-1)]+coeff[1]*(var[(nx-3)*(ny-1):(nx-2)*(ny-1)])+coeff[2]*(var[(nx-4)*(ny-1):(nx-3)*(ny-1)])+coeff[3]*(var[(nx-5)*(ny-1):(nx-4)*(ny-1)])+coeff[4]*(var[(nx-6)*(ny-1):(nx-5)*(ny-1)])
         else:
             result[4:(ny-1)*(nx-1)-4]=coeff[0]*var[4:(ny-1)*(nx-1)-4]+coeff[1]*(var[5:(ny-1)*(nx-1)-3]+var[3:(ny-1)*(nx-1)-5])+coeff[2]*(var[6:(ny-1)*(nx-1)-2]+var[2:(ny-1)*(nx-1)-6])+coeff[3]*(var[7:(ny-1)*(nx-1)-1]+var[1:(ny-1)*(nx-1)-7])+coeff[4]*(var[8:(ny-1)*(nx-1)]+var[:(ny-1)*(nx-1)-8])
-            result[range(0,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(0,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(2,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(3,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(4,(nx-1)*(ny-1),ny-1)])
-            result[range(1,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(1,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(2,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(3,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(4,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(5,(nx-1)*(ny-1),ny-1)])
-            result[range(2,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(2,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(3,(nx-1)*(ny-1),ny-1)]+var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(4,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(5,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(6,(nx-1)*(ny-1),ny-1)])
-            result[range(3,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(3,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(4,(nx-1)*(ny-1),ny-1)]+var[range(2,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(5,(nx-1)*(ny-1),ny-1)]+var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(6,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(7,(nx-1)*(ny-1),ny-1)])
+            if free_surf==0:
+                result[range(0,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(0,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(2,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(3,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(4,(nx-1)*(ny-1),ny-1)])
+                result[range(1,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(1,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(2,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(3,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(4,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(5,(nx-1)*(ny-1),ny-1)])
+                result[range(2,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(2,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(3,(nx-1)*(ny-1),ny-1)]+var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(4,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(5,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(6,(nx-1)*(ny-1),ny-1)])
+                result[range(3,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(3,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(4,(nx-1)*(ny-1),ny-1)]+var[range(2,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(5,(nx-1)*(ny-1),ny-1)]+var[range(1,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(6,(nx-1)*(ny-1),ny-1)]+var[range(0,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(7,(nx-1)*(ny-1),ny-1)])
+            else:
+                result[range(0,(nx-1)*(ny-1),ny-1)]=(-3144919/352800)*var[range(0,(nx-1)*(ny-1),ny-1)]+16*(var[range(1,(nx-1)*(ny-1),ny-1)])-14*(var[range(2,(nx-1)*(ny-1),ny-1)])+(112/9)*(var[range(3,(nx-1)*(ny-1),ny-1)])-(35/4)*(var[range(4,(nx-1)*(ny-1),ny-1)])+(112/25)*(var[range(5,(nx-1)*(ny-1),ny-1)])-(14/9)*(var[range(6,(nx-1)*(ny-1),ny-1)])+(16/49)*(var[range(7,(nx-1)*(ny-1),ny-1)])-(1/32)*(var[range(8,(nx-1)*(ny-1),ny-1)])
+                result[range(1,(nx-1)*(ny-1),ny-1)]=(271343/156800)*var[range(0,(nx-1)*(ny-1),ny-1)]-(1991/630)*(var[range(1,(nx-1)*(ny-1),ny-1)])+(57/40)*(var[range(2,(nx-1)*(ny-1),ny-1)])+(13/60)*(var[range(3,(nx-1)*(ny-1),ny-1)])-(109/288)*(var[range(4,(nx-1)*(ny-1),ny-1)])+(6/25)*(var[range(5,(nx-1)*(ny-1),ny-1)])-(11/120)*(var[range(6,(nx-1)*(ny-1),ny-1)])+(179/8820)*(var[range(7,(nx-1)*(ny-1),ny-1)])-(9/4480)*(var[range(8,(nx-1)*(ny-1),ny-1)])
+                result[range(2,(nx-1)*(ny-1),ny-1)]=(-18519/78400)*var[range(0,(nx-1)*(ny-1),ny-1)]+(58/35)*(var[range(1,(nx-1)*(ny-1),ny-1)])-(251/90)*(var[range(2,(nx-1)*(ny-1),ny-1)])+(22/15)*(var[range(3,(nx-1)*(ny-1),ny-1)])-(1/16)*(var[range(4,(nx-1)*(ny-1),ny-1)])-(14/225)*(var[range(5,(nx-1)*(ny-1),ny-1)])+(1/30)*(var[range(6,(nx-1)*(ny-1),ny-1)])-(2/245)*(var[range(7,(nx-1)*(ny-1),ny-1)])+(17/20160)*(var[range(8,(nx-1)*(ny-1),ny-1)])
+                result[range(3,(nx-1)*(ny-1),ny-1)]=(74801/1411200)*var[range(0,(nx-1)*(ny-1),ny-1)]-(37/140)*(var[range(1,(nx-1)*(ny-1),ny-1)])+(67/40)*(var[range(2,(nx-1)*(ny-1),ny-1)])-(263/90)*(var[range(3,(nx-1)*(ny-1),ny-1)])+(53/32)*(var[range(4,(nx-1)*(ny-1),ny-1)])-(23/100)*(var[range(5,(nx-1)*(ny-1),ny-1)])+(13/360)*(var[range(6,(nx-1)*(ny-1),ny-1)])-(1/245)*(var[range(7,(nx-1)*(ny-1),ny-1)])+(1/4480)*(var[range(8,(nx-1)*(ny-1),ny-1)])
             result[range(ny-5,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(ny-5,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(ny-4,(nx-1)*(ny-1),ny-1)]+var[range(ny-6,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(ny-3,(nx-1)*(ny-1),ny-1)]+var[range(ny-7,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(ny-2,(nx-1)*(ny-1),ny-1)]+var[range(ny-8,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(ny-9,(nx-1)*(ny-1),ny-1)])
             result[range(ny-4,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(ny-4,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(ny-3,(nx-1)*(ny-1),ny-1)]+var[range(ny-5,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(ny-2,(nx-1)*(ny-1),ny-1)]+var[range(ny-6,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(ny-7,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(ny-8,(nx-1)*(ny-1),ny-1)])
             result[range(ny-3,(nx-1)*(ny-1),ny-1)]=coeff[0]*var[range(ny-3,(nx-1)*(ny-1),ny-1)]+coeff[1]*(var[range(ny-2,(nx-1)*(ny-1),ny-1)]+var[range(ny-4,(nx-1)*(ny-1),ny-1)])+coeff[2]*(var[range(ny-5,(nx-1)*(ny-1),ny-1)])+coeff[3]*(var[range(ny-6,(nx-1)*(ny-1),ny-1)])+coeff[4]*(var[range(ny-7,(nx-1)*(ny-1),ny-1)])
@@ -253,27 +264,32 @@ def dp2x_2D(var,dx,dir,ord,nx,ny):
     return result/dx**2
 
 
-def beta_i(dim,dx,nx,ny,delta,beta0,i,j):
-    n_beta=np.int(delta/dx)
+def beta_i(dim,dx,nx,ny,delta,beta0,i,j,free_surf):
+    n_beta=int(delta/dx)
     aux=0
-    if j==1:  # j==1 vx,vy, j==0 u, wx, wy
+    if j==1:  # j==1 vx,vy, j!=1 u, wx, wy (for 1SD)
         aux=1/2
 
     if dim==1:
         result=np.zeros((nx-1,1))
-        for j in range(n_beta):
-            result[j]=beta0*pow((delta-(j+1-aux)*dx)/delta,2)
-            result[-(1+j)]=beta0*pow((delta-(j+1/2+aux)*dx)/delta,2)
+        for k in range(n_beta):
+            result[k]=beta0*pow((delta-(k+1-aux)*dx)/delta,2)
+            result[-(1+k)]=beta0*pow((delta-(k+1/2+aux)*dx)/delta,2)
     elif dim==2:
         result=np.zeros(((nx-1)*(ny-1),1))
         if i==1:
-            for j in range(n_beta):
-                result[np.arange((ny-1)*j,(ny-1)*(j+1))]=beta0*pow((delta-(j+1-aux)*dx)/delta,2)
-                result[np.arange((ny-1)*(nx-2-j),(ny-1)*(nx-1-j))]=beta0*pow((delta-(j+1/2+aux)*dx)/delta,2)
+            for k in range(n_beta):
+                result[np.arange((ny-1)*k,(ny-1)*(k+1))]=beta0*pow((delta-(k+1-aux)*dx)/delta,2)
+                result[np.arange((ny-1)*(nx-2-k),(ny-1)*(nx-1-k))]=beta0*pow((delta-(k+1/2+aux)*dx)/delta,2)
         else:
-            for j in range(n_beta):
-                result[np.arange(j,(ny-1)*(nx-1),ny-1)]=beta0*pow((delta-(j+1/2+aux)*dx)/delta,2)
-                result[np.arange(ny-2-j,(ny-1)*(nx-1),ny-1)]=beta0*pow((delta-(j+1-aux)*dx)/delta,2)
+            if free_surf==0: # condition of the free surface for the functions Beta for the 'y' direction (Beta_20 and Beta_21)
+                for k in range(n_beta):
+                    result[np.arange(k,(ny-1)*(nx-1),ny-1)]=beta0*pow((delta-(k+1/2+aux)*dx)/delta,2)
+                    result[np.arange(ny-2-k,(ny-1)*(nx-1),ny-1)]=beta0*pow((delta-(k+1-aux)*dx)/delta,2)
+            else:
+                for k in range(n_beta):
+                    result[np.arange(ny-2-k,(ny-1)*(nx-1),ny-1)]=beta0*pow((delta-(k+1-aux)*dx)/delta,2)
+
     return result
 
 
@@ -337,7 +353,7 @@ def dpx_1D(vec,dx,pos,ord,nx):
     return result
 
 
-def dpx_2D(vec,dx,dir,pos,ord,nx,ny):
+def dpx_2D(vec,dx,dir,pos,ord,nx,ny,free_surf):
     # Function to calculate the partial derivative of a variable
 
     # INPUTS:
@@ -347,8 +363,8 @@ def dpx_2D(vec,dx,dir,pos,ord,nx,ny):
     #       1 - x direction
     #       2 - y direction
     # pos: position of the grid point (to calculate the derivative)
-    #       1 - derivatives of the variables with the nearest points to the left or the lower boundary of the effective domain (vx, vy)
-    #       2 - are the other variables (u, wx, wy)
+    #       1 - derivatives of the variables with the nearest points to the left or the lower boundary of the effective domain (vx, vy, for 1SD)
+    #       2 - are the other variables (u, wx, wy, for 1SD)
     # ord: order of the finite difference scheme used in the derivative
     # nx-1: number of points in the spatial grid on the x axis in the effective numerical domain
     # ny-1: number of points in the spatial grid on the y axis in the effective numerical domain
@@ -420,22 +436,36 @@ def dpx_2D(vec,dx,dir,pos,ord,nx,ny):
         else:
             if pos==1:
                 result[4:(ny-1)*(nx-1)-3]=vec[3:(ny-1)*(nx-1)-4]-vec[4:(ny-1)*(nx-1)-3]-1/15*(vec[2:(ny-1)*(nx-1)-5]-vec[5:(ny-1)*(nx-1)-2])+1/125*(vec[1:(ny-1)*(nx-1)-6]-vec[6:(ny-1)*(nx-1)-1])-1/1715*(vec[:(ny-1)*(nx-1)-7]-vec[7:(ny-1)*(nx-1)])
-                result[range(0,(nx-1)*(ny-1),ny-1)]=-vec[range(0,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(1,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(2,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(3,(nx-1)*(ny-1),ny-1)])
-                result[range(1,(nx-1)*(ny-1),ny-1)]=vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(1,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(2,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(3,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(4,(nx-1)*(ny-1),ny-1)])
-                result[range(2,(nx-1)*(ny-1),ny-1)]=vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(4,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(5,(nx-1)*(ny-1),ny-1)])
-                result[range(3,(nx-1)*(ny-1),ny-1)]=vec[range(2,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(5,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(6,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-4,(nx-1)*(ny-1),ny-1)]=vec[range(ny-5,(nx-1)*(ny-1),ny-1)]-vec[range(ny-4,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)]-vec[range(ny-3,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-7,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-8,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-3,(nx-1)*(ny-1),ny-1)]=vec[range(ny-4,(nx-1)*(ny-1),ny-1)]-vec[range(ny-3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-5,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-7,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-2,(nx-1)*(ny-1),ny-1)]=vec[range(ny-3,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-5,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)])
+                if free_surf==0:
+                    result[range(0,(nx-1)*(ny-1),ny-1)]=-vec[range(0,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(1,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(2,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(3,(nx-1)*(ny-1),ny-1)])
+                    result[range(1,(nx-1)*(ny-1),ny-1)]=vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(1,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(2,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(3,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(4,(nx-1)*(ny-1),ny-1)])
+                    result[range(2,(nx-1)*(ny-1),ny-1)]=vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(4,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(5,(nx-1)*(ny-1),ny-1)])
+                    result[range(3,(nx-1)*(ny-1),ny-1)]=vec[range(2,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(5,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(6,(nx-1)*(ny-1),ny-1)])
+                    result=result*1225/(1024*dx)
+                else:
+                    result=result*1225/(1024*dx)
+                    result[range(0,(nx-1)*(ny-1),ny-1)]=(-6435/1024)*vec[range(1,(nx-1)*(ny-1),ny-1)]+(5005/1024)*vec[range(2,(nx-1)*(ny-1),ny-1)]-(27027/5120)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(32175/7168)*vec[range(4,(nx-1)*(ny-1),ny-1)]-(25025/9216)*vec[range(5,(nx-1)*(ny-1),ny-1)]+(12285/11264)*vec[range(6,(nx-1)*(ny-1),ny-1)]-(3465/13312)*vec[range(7,(nx-1)*(ny-1),ny-1)]+(143/5120)*vec[range(8,(nx-1)*(ny-1),ny-1)]
+                    result[range(1,(nx-1)*(ny-1),ny-1)]=(131093/107520)*vec[range(1,(nx-1)*(ny-1),ny-1)]-(49087/46080)*vec[range(2,(nx-1)*(ny-1),ny-1)]-(10973/76800)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(4597/21504)*vec[range(4,(nx-1)*(ny-1),ny-1)]-(4019/27648)*vec[range(5,(nx-1)*(ny-1),ny-1)]+(10331/168960)*vec[range(6,(nx-1)*(ny-1),ny-1)]-(2983/199680)*vec[range(7,(nx-1)*(ny-1),ny-1)]+(2621/1612800)*vec[range(8,(nx-1)*(ny-1),ny-1)]
+                    result[range(2,(nx-1)*(ny-1),ny-1)]=(-8707/107520)*vec[range(1,(nx-1)*(ny-1),ny-1)]+(17947/15360)*vec[range(2,(nx-1)*(ny-1),ny-1)]-(29319/25600)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(533/21504)*vec[range(4,(nx-1)*(ny-1),ny-1)]+(263/9216)*vec[range(5,(nx-1)*(ny-1),ny-1)]-(903/56320)*vec[range(6,(nx-1)*(ny-1),ny-1)]+(283/66560)*vec[range(7,(nx-1)*(ny-1),ny-1)]-(257/537600)*vec[range(8,(nx-1)*(ny-1),ny-1)]
+                    result[range(3,(nx-1)*(ny-1),ny-1)]=(543/35840)*vec[range(1,(nx-1)*(ny-1),ny-1)]-(265/3072)*vec[range(2,(nx-1)*(ny-1),ny-1)]+(1233/1024)*vec[range(3,(nx-1)*(ny-1),ny-1)]-(8625/7168)*vec[range(4,(nx-1)*(ny-1),ny-1)]+(775/9216)*vec[range(5,(nx-1)*(ny-1),ny-1)]-(639/56320)*vec[range(6,(nx-1)*(ny-1),ny-1)]+(15/13312)*vec[range(7,(nx-1)*(ny-1),ny-1)]-(1/21504)*vec[range(8,(nx-1)*(ny-1),ny-1)]
             elif pos==2:
                 result[3:(ny-1)*(nx-1)-4]=vec[3:(ny-1)*(nx-1)-4]-vec[4:(ny-1)*(nx-1)-3]-1/15*(vec[2:(ny-1)*(nx-1)-5]-vec[5:(ny-1)*(nx-1)-2])+1/125*(vec[1:(ny-1)*(nx-1)-6]-vec[6:(ny-1)*(nx-1)-1])-1/1715*(vec[:(ny-1)*(nx-1)-7]-vec[7:(ny-1)*(nx-1)])
-                result[range(0,(nx-1)*(ny-1),ny-1)]=vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(1,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(2,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(3,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(4,(nx-1)*(ny-1),ny-1)])
-                result[range(1,(nx-1)*(ny-1),ny-1)]=vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(4,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(5,(nx-1)*(ny-1),ny-1)])
-                result[range(2,(nx-1)*(ny-1),ny-1)]=vec[range(2,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(5,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(6,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-5,(nx-1)*(ny-1),ny-1)]=vec[range(ny-5,(nx-1)*(ny-1),ny-1)]-vec[range(ny-4,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)]-vec[range(ny-3,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-7,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-8,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-4,(nx-1)*(ny-1),ny-1)]=vec[range(ny-4,(nx-1)*(ny-1),ny-1)]-vec[range(ny-3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-5,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-7,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-3,(nx-1)*(ny-1),ny-1)]=vec[range(ny-3,(nx-1)*(ny-1),ny-1)]-vec[range(ny-2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-5,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-6,(nx-1)*(ny-1),ny-1)])
                 result[range(ny-2,(nx-1)*(ny-1),ny-1)]=vec[range(ny-2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(ny-3,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(ny-4,(nx-1)*(ny-1),ny-1)])-1/1715*(vec[range(ny-5,(nx-1)*(ny-1),ny-1)])
-        result=result*1225/(1024*dx)
+                if free_surf==0:
+                    result[range(0,(nx-1)*(ny-1),ny-1)]=vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(1,(nx-1)*(ny-1),ny-1)]-1/15*(-vec[range(2,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(3,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(4,(nx-1)*(ny-1),ny-1)])
+                    result[range(1,(nx-1)*(ny-1),ny-1)]=vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(2,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)])+1/125*(-vec[range(4,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(5,(nx-1)*(ny-1),ny-1)])
+                    result[range(2,(nx-1)*(ny-1),ny-1)]=vec[range(2,(nx-1)*(ny-1),ny-1)]-vec[range(3,(nx-1)*(ny-1),ny-1)]-1/15*(vec[range(1,(nx-1)*(ny-1),ny-1)]-vec[range(4,(nx-1)*(ny-1),ny-1)])+1/125*(vec[range(0,(nx-1)*(ny-1),ny-1)]-vec[range(5,(nx-1)*(ny-1),ny-1)])-1/1715*(-vec[range(6,(nx-1)*(ny-1),ny-1)])
+                    result=result*1225/(1024*dx)
+                else:
+                    result=result*1225/(1024*dx)
+                    result[range(0,(nx-1)*(ny-1),ny-1)]=(5034629/3763200)*vec[range(0,(nx-1)*(ny-1),ny-1)]-(23533/15360)*vec[range(1,(nx-1)*(ny-1),ny-1)]+(4259/15360)*vec[range(2,(nx-1)*(ny-1),ny-1)]-(1103/9216)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(151/3072)*vec[range(4,(nx-1)*(ny-1),ny-1)]-(1171/76800)*vec[range(5,(nx-1)*(ny-1),ny-1)]+(139/46080)*vec[range(6,(nx-1)*(ny-1),ny-1)]-(211/752640)*vec[range(7,(nx-1)*(ny-1),ny-1)]
+                    result[range(1,(nx-1)*(ny-1),ny-1)]=(-363509/3763200)*vec[range(0,(nx-1)*(ny-1),ny-1)]+(6297/5120)*vec[range(1,(nx-1)*(ny-1),ny-1)]-(6147/5120)*vec[range(2,(nx-1)*(ny-1),ny-1)]+(211/3072)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(3/1024)*vec[range(4,(nx-1)*(ny-1),ny-1)]-(153/25600)*vec[range(5,(nx-1)*(ny-1),ny-1)]+(29/15360)*vec[range(6,(nx-1)*(ny-1),ny-1)]-(57/250880)*vec[range(7,(nx-1)*(ny-1),ny-1)]
+                    result[range(2,(nx-1)*(ny-1),ny-1)]=(4631/250880)*vec[range(0,(nx-1)*(ny-1),ny-1)]-(305/3072)*vec[range(1,(nx-1)*(ny-1),ny-1)]+(1245/1024)*vec[range(2,(nx-1)*(ny-1),ny-1)]-(3725/3072)*vec[range(3,(nx-1)*(ny-1),ny-1)]+(275/3072)*vec[range(4,(nx-1)*(ny-1),ny-1)]-(69/5120)*vec[range(5,(nx-1)*(ny-1),ny-1)]+(5/3072)*vec[range(6,(nx-1)*(ny-1),ny-1)]-(5/50176)*vec[range(7,(nx-1)*(ny-1),ny-1)]
 
     return result

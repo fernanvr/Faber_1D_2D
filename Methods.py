@@ -4,7 +4,7 @@ from time import time
 import os
 
 
-def method_solver(method,var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace):
+def method_solver(method,var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace,save_step):
 
     # cheking if there exist the paste to save the results, and creating one if there is not
     if not os.path.isdir(example + '/'):
@@ -28,15 +28,15 @@ def method_solver(method,var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta
 
     # Faber polynomial approximation
     if method=='FA':
-        return sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace)
+        return sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace,save_step)
 
     # High-order Runge-Kutta
     if method=='HORK':
-        return sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace)
+        return sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace,save_step)
 
     # Krylov method
     if method=='KRY':
-        return sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace)
+        return sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace,save_step)
 
 
 def domain_source(dx,T,T_frac_snapshot,Ndt,dim,equ,example,ord,delta):
@@ -115,6 +115,7 @@ def sol_RK_7(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,d
 
         # to save computations, watch if the solution was calculated for this time-step size
         if os.path.isfile(str(example)+'/RK_ref_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx)+'_points.npy') and replace==0:
+            var=var0+0
             continue
 
         # print('i',i)  # printing to know were the process is
@@ -136,7 +137,7 @@ def sol_RK_7(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,d
                 np.save(str(example)+'/RK_ref_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx),var[:nx*ny,0])
 
         np.save(str(example)+'/RK_ref_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx)+'_points',RK_ref_points[::2,:])
-
+        print("RK7       3")
         # print('time ',time()-start) # printing to know the amount of computational time taken
     return var
 
@@ -152,6 +153,7 @@ def sol_RK_2(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,d
 
         # to save computations, watch if the solution was calculated for this time-step size
         if os.path.isfile(str(example)+'/sol_rk2_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx)+'_points.npy') and replace==0:
+            var=var0+0
             continue
 
         # initialization of the array to save the solution in the specific spatial points
@@ -185,6 +187,7 @@ def sol_RK_4(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,d
 
         # to save computations, watch if the solution was calculated for this time-step size
         if os.path.isfile(str(example)+'/sol_rk4_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx)+'_points'+'.npy') and replace==0:
+            var=var0+0
             continue
 
         # initialization of the array to save the solution in the specific spatial points
@@ -220,13 +223,14 @@ def sol_time_2step(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0
 
         # to save computations, watch if the solution was calculated for this time-step size
         if os.path.isfile(str(example)+'/sol_2MS_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_dx_'+str(dx)+'_points'+'.npy') and replace==0:
+            var=var0+0
             continue
 
-        var=aux_fun.method_time_2steps(var0=var0,Ndt=Ndt[i],Nt=NDt[i],dt=Dt[i],T_frac_snapshot=T_frac_snapshot,nx=nx,ny=ny,dx=dx,c2=param,source_type=source_type,f=f[nx*ny:2*nx*ny,:],param_ricker=param_ricker,equ=equ,dim=dim,free_surf=free_surf,delta=delta,beta0=beta0,ord=ord,points=points,example=example,i=i)
+        var=aux_fun.method_time_2steps(var0=var0,Ndt=Ndt[i],Nt=NDt[i],dt=Dt[i],T_frac_snapshot=T_frac_snapshot,nx=nx,ny=ny,dx=dx,c2=param,source_type=source_type,f=f[nx*ny:2*nx*ny,:],param_ricker=param_ricker,equ=equ,dim=dim,free_surf=free_surf,delta=delta,beta0=beta0,ord=ord,points=points,example=example)
     return var
 
 
-def sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace):
+def sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,ind_source,replace,save_step):
     # Function to calculate the solution using a Faber polynomials scheme.
 
     # It saves the value of the displacement in the x-direction at the last time instant for several polynoamil degrees,
@@ -259,7 +263,15 @@ def sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,
 
             # to save computations, watch if the solution was calculated for this time-step size
             if os.path.isfile(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy') and replace==0:
+                var=var0+0
                 continue
+
+            # using a saved solution
+            if save_step and os.path.isfile(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                NDt0=np.load(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
+                var0=np.load(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+            else:
+                NDt0=0
 
             # condition to work with the expanded version of H or the source term Faber expansion
             if ind_source=='H_amplified':
@@ -273,7 +285,7 @@ def sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,
                 var=var0*1
 
             # cycle to compute the solution using a specific time step size
-            for l in range(NDt[i]):
+            for l in range(NDt0,NDt[i]):
 
                 # condition to work with the expanded version of H or the source term Faber expansion
                 if ind_source=='H_amplified':
@@ -299,14 +311,22 @@ def sol_faber(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,
 
                 if l==(round(NDt[i]*T_frac_snapshot)-1):
                     np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),var[:nx*ny,0])
+                if l%1000==0 and save_step:
+                    np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0',var)
+                    np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t',l)
 
             np.save(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),sol_faber_points[::2,:])
+
+            # cleaning the intermediate saved solution
+            if os.path.isfile(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                os.remove(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+                os.remove(str(example)+'/sol_faber_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_'+ind_source+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
 
         # print('time ',time()-start) # printing to know the amount of computational time taken
     return var[:-(degree[-1]+1)]
 
 
-def sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace):
+def sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace,save_step):
     # Function to calculate the solution using arbitrary high order Runge-Kutta (HORK).
 
     # It saves the value of the displacement in the x-direction at the last time instant for several polynoamil degrees,
@@ -325,7 +345,15 @@ def sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,
 
             # to save computations, watch if the solution was calculated for this time-step size
             if os.path.isfile(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy') and replace==0:
+                var=var0+0
                 continue
+
+            # using a saved solution
+            if save_step and os.path.isfile(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                NDt0=np.load(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
+                var0=np.load(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+            else:
+                NDt0=0
 
             # constructing the amplified matrix
             ext=np.zeros((degree[j]+1,1))
@@ -334,7 +362,7 @@ def sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,
             uk_core=aux_fun.g_core(p=degree[j]+1,f0=param_ricker[0],t0=param_ricker[1],source_type=source_type)
 
             # cycle to compute the solution using a specific time step size
-            for l in range(NDt[i]):
+            for l in range(NDt0,NDt[i]):
 
                 # updating the amplified matrix
                 u_k=aux_fun.g_approx(f=f,p=degree[j]+1,f0=param_ricker[0],t0=param_ricker[1],t=l*Dt[i],source_type=source_type,uk_core=uk_core)
@@ -355,12 +383,21 @@ def sol_rk(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,
 
                 if l==(round(NDt[i]*T_frac_snapshot)-1):
                     np.save(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),var[:nx*ny,0])
+                if l%1000==0 and save_step:
+                    np.save(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0',var)
+                    np.save(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t',l)
 
             np.save(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),sol_rk_points[::2,:])
+
+            # cleaning the intermediate saved solution
+            if os.path.isfile(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                os.remove(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+                os.remove(str(example)+'/sol_rk_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
+
     return var[:-(degree[-1]+1)]
 
 
-def sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace):
+def sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord,dx,param,nx,ny,f,param_ricker,source_type,points,example,degree,replace,save_step):
     # Function to calculate the solution using Krylov subspace method.
 
     # It saves the value of the displacement in the x-direction at the last time instant for several polynoamil degrees,
@@ -378,7 +415,15 @@ def sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord
 
             # to save computations, watch if the solution was calculated for this time-step size
             if os.path.isfile(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'.npy') and replace==0:
+                var=var0+0
                 continue
+
+            # using a saved solution
+            if save_step and os.path.isfile(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                NDt0=np.load(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
+                var0=np.load(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+            else:
+                NDt0=0
 
             # constructing the amplified matrix
             ext=np.zeros((degree[j]+1,1))
@@ -387,7 +432,7 @@ def sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord
             uk_core=aux_fun.g_core(p=degree[j]+1,f0=param_ricker[0],t0=param_ricker[1],source_type=source_type)
 
             # cycle to compute the solution using a specific time step size
-            for l in range(NDt[i]):
+            for l in range(NDt0,NDt[i]):
                 # start = time()  # to check the amount of time taked to compute the solution with Krylov
 
                 # updating the amplified matrix
@@ -401,17 +446,23 @@ def sol_krylov(var0,Ndt,NDt,Dt,T_frac_snapshot,equ,dim,free_surf,delta,beta0,ord
 
                 # calculating the solution with Krylov on the next time instant
                 var=aux_fun.krylov_op(var,degree[j],Dt[i],equ,dim,free_surf,delta,beta0,ord,dx,param,nx+1,ny+1,u_k)
+                # var=aux_fun.RK_op(var,1,Dt[i],equ,dim,free_surf,delta,beta0,ord,dx,param,nx+1,ny+1,degree[j],u_k)
 
                 sol_krylov_points[l,:]=var[points,0]
 
                 # updating the amplified matrix
                 var[-(degree[j]+1):]=0
 
-                # if l%10==0:
-                #     print('degree, l and time',degree[j],l,time()-start) # checking the time nedded to compute some intervals
-
                 if l==(round(NDt[i]*T_frac_snapshot)-1):
                     np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),var[:nx*ny,0])
+                if l%1000==0 and save_step:
+                    np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0',var)
+                    np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t',l)
 
             np.save(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_points_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx),sol_krylov_points[::2,:])
+
+            # cleaning the intermediate saved solution
+            if os.path.isfile(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy'):
+                os.remove(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_var0.npy')
+                os.remove(str(example)+'/sol_krylov_equ_'+str(equ)+'_free_surf_'+str(free_surf)+'_ord_'+ord+'_Ndt_'+str(Ndt[i])+'_degree_'+str(degree[j])+'_dx_'+str(dx)+'_saved_t.npy')
     return var[:-(degree[-1]+1)]

@@ -126,9 +126,9 @@ def graph_limit_eigen(dx,equ,delta,beta0,ord,example,ind):
         plt.plot((1/dx)[:index_sr],eigen_sr[:index_sr],linewidth=3,label=label_fun(example[i],ord[i],equ[i]),dashes=graph_dashes[i],alpha=0.8)
 
     plt.plot((1/dx)[:index_sr],-beta0*pow((delta-dx[:index_sr])/delta,2),color='k',linestyle='--',linewidth=3,label='left_bound')
-    plt.ylabel('Real inferior limit',fontsize=24)
+    plt.ylabel('Real limit',fontsize=24)
     graph_block()
-    plt.savefig('eigenvalues/eigen_experiments_sr_'+ind+'.pdf')
+    plt.savefig('eigenvalues_images/eigen_experiments_sr_'+ind+'.pdf')
     plt.show()
 
     # cycle for the eigenvalue with the largest real part ------------------------------------------------------------
@@ -140,7 +140,7 @@ def graph_limit_eigen(dx,equ,delta,beta0,ord,example,ind):
 
     plt.ylabel('Real superior limit',fontsize=24)
     graph_block()
-    plt.savefig('eigenvalues/eigen_experiments_lr_'+ind+'.pdf')
+    plt.savefig('eigenvalues_images/eigen_experiments_lr_'+ind+'.pdf')
     plt.show()
 
     # cycle for the eigenvalue with the largest imaginary part -------------------------------------------------------
@@ -152,7 +152,7 @@ def graph_limit_eigen(dx,equ,delta,beta0,ord,example,ind):
 
     plt.ylabel('Imaginary limit',fontsize=24)
     graph_block()
-    plt.savefig('eigenvalues/eigen_experiments_li_'+ind+'.pdf')
+    plt.savefig('eigenvalues_images/eigen_experiments_li_'+ind+'.pdf')
     plt.show()
 
     # cycle for the eigenvalue with the slope of the largest imaginary part ------------------------------------------
@@ -164,7 +164,7 @@ def graph_limit_eigen(dx,equ,delta,beta0,ord,example,ind):
 
     plt.ylabel('Slope',fontsize=24)
     graph_block()
-    plt.savefig('eigenvalues/eigen_experiments_li_slope_'+ind+'.pdf')
+    plt.savefig('eigenvalues_images/eigen_experiments_li_slope_'+ind+'.pdf')
     plt.show()
 
     # # cycle for the real part of the eigenvalue with the largest magnitude -------------------------------------------
@@ -239,44 +239,16 @@ def graph_eigen_full(dx,equ,dim,ord,example):
         plt.scatter(vals.real,vals.imag,alpha=0.7)
         plt.axhline(y=0, color='k')
         plt.axvline(x=0, color='k')
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=25)
+        plt.xticks(fontsize=18)
+        plt.yticks(fontsize=18)
         plt.subplots_adjust(left=0.15, bottom=0.15, right=0.9, top=0.9)
-        plt.savefig('eigenvalues/eigenval_equ_'+equ+'_dim_'+str(dim)+'_ord_'+ord+'_i_'+str(i)+'.pdf')
+        plt.savefig('eigenvalues_images/eigenval_equ_'+equ+'_dim_'+str(dim)+'_ord_'+ord+'_i_'+str(i)+'.pdf')
         plt.show()
 
 
 # cheking if there exist the paste to save the results, and creating one if there is not
 if not os.path.isdir('eigenvalues/'):
     os.mkdir('eigenvalues')
-
-
-# ------------------------------------------------------------------------------------
-# Code for the computation of the spectrum of H and the eigenvalues limits, according to the results of the paper
-# ------------------------------------------------------------------------------------
-
-# param=np.array([['scalar',1,'4','1D_heterogeneous_2'],['scalar_dx2',1,'4','1D_heterogeneous_2'],['scalar',2,'4','2D_heterogeneous_3'],
-#                     ['scalar_dx2',2,'4','2D_heterogeneous_3'],['elastic',2,'4','2D_heterogeneous_3'],['scalar',1,'8','1D_heterogeneous_2'],
-#                 ['scalar_dx2',1,'8','1D_heterogeneous_2'],['scalar',2,'8','2D_heterogeneous_3'],['scalar_dx2',2,'8','2D_heterogeneous_3'],
-#                 ['elastic',2,'8','2D_heterogeneous_3']])
-# param=param[np.array([0,1,5,6]),:]
-#
-# for i in range(len(param)):
-#
-#     # condition to adjust dx for the different dimensions
-#     if int(param[i,1])==1:
-#         # dx=10.5/np.array([100,500,1000,5000])  # for the all spectrum
-#         dx=10.5/(10*np.arange(3,500))          # for the limit eigenvalues
-#     else:
-#         # dx=8/np.array([10,50,100,500])         # for the all spectrum
-#         dx=8/(5*np.arange(3,50))             # for the limit eigenvalues
-#
-#     # computing the spectrum and eigenvalue limits
-#     # eigen_full(dx=dx,equ=param[i,0],dim=int(param[i,1]),delta=1.5,beta0=30,ord=param[i,2],T=2,Ndt=1,example=param[i,3])
-#     limit_eigen(dx=dx,equ=param[i,0],dim=int(param[i,1]),delta=1.5,beta0=30,ord=param[i,2],T=2,Ndt=1,example=param[i,3])
-#
-#     # plotting the spectrum
-#     # graph_eigen_full(dx=dx,equ=param[i,0],dim=int(param[i,1]),ord=param[i,2],example=param[i,3])
 
 
 # code for using a bash script to compute the full spectrum and the eigenvalues limits ------------------------------
@@ -297,79 +269,56 @@ if not os.path.isdir('eigenvalues/'):
 # limit_eigen(dx=dx,equ=equ,dim=int(dim),delta=1.5,beta0=30,ord=ord,T=2,Ndt=1,example=example)
 
 
-# Figures for the eigenvalues limits, according to the paper experiments --------------------------------------------
 
-equ=np.array(['scalar','scalar_dx2','scalar','scalar_dx2'])
-ord=np.array(['4','4','8','8'])
-example=np.array(['1D_heterogeneous_2','1D_heterogeneous_2','1D_heterogeneous_2','1D_heterogeneous_2'])
-graph_limit_eigen(dx=10.5/(10*np.arange(3,500)),equ=equ,delta=1.5,beta0=30,ord=ord,example=example,ind='Test3')
-
-equ=np.array(['scalar','scalar_dx2','scalar','scalar_dx2'])
-ord=np.array(['4','4','8','8'])
-example=np.array(['2D_heterogeneous_3','2D_heterogeneous_3','2D_heterogeneous_3','2D_heterogeneous_3'])
-graph_limit_eigen(dx=8/(10*np.arange(3,500)),equ=equ,delta=1.5,beta0=30,ord=ord,example=example,ind='Test5')
-
-equ=np.array(['elastic','elastic'])
-ord=np.array(['4','8'])
-example=np.array(['2D_heterogeneous_3','2D_heterogeneous_3'])
-graph_limit_eigen(dx=8/(10*np.arange(3,500)),equ=equ,delta=1.5,beta0=30,ord=ord,example=example,ind='Test7')
-
-equ=np.array(['scalar','scalar','scalar'])
-ord=np.array(['8','8','8'])
-example=np.array(['1D_homogeneous_0','1D_heterogeneous_2','1D_heterogeneous_1a'])
-graph_limit_eigen(dx=10.5/(10*np.arange(3,500)),equ=equ,delta=1.5,beta0=30,ord=ord,example=example,ind='Test_velocity')
 #
 #
 # code for eigenvalues limits with variations of the PML conditions --------------------------------------------------
 
-# dx=10.5/(10*np.arange(3,135))
-# equ='scalar'
-# dim=1
-# ord='8'
-# #
-# # delta=float(sys.argv[1])
-# # beta0=float(sys.argv[2])
-# # example=sys.argv[3]
-# #
-# # limit_eigen(dx=dx,equ=equ,dim=dim,delta=delta,beta0=beta0,ord=ord,T=2,Ndt=1,example=example)
-#
-# # limit_eigen(dx=dx,equ=equ,dim=dim,delta=1.5,beta0=30,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1a')
-# # limit_eigen(dx=dx,equ=equ,dim=dim,delta=0.1,beta0=0.1,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1b')
-# # limit_eigen(dx=dx,equ=equ,dim=dim,delta=3.2,beta0=200,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1c')
-#
-#
-# def graph_block():
-#     plt.legend(fontsize=19)
-#     plt.xticks(fontsize=19)
-#     plt.yticks(fontsize=19)
-#     plt.xlabel('$1/\Delta x$',fontsize=23)
-#     plt.subplots_adjust(left=0.22, bottom=0.15, right=0.9, top=0.9)
-#
-# eigen_lia=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1a.npy')
-# eigen_lib=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1b.npy')
-# eigen_lic=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1c.npy')
-#
-# index_lia=np.max(np.arange(len(eigen_lia))[eigen_lia!=0])
-# index_lib=np.max(np.arange(len(eigen_lib))[eigen_lib!=0])
-# index_lic=np.max(np.arange(len(eigen_lic))[eigen_lic!=0])
-#
-# graph_dashes=np.array([[12,6],[6,1,6,6],[12,6,2,6],[3,2],[2,1,2,1,2,6]],dtype=np.ndarray)
-# # maximum imaginary part
-# plt.plot((1/dx)[:index_lia],-eigen_lia[:index_lia],linewidth=3.2,label='$\delta=1.5$, '+r'$\beta_0=30$',alpha=0.8,dashes=graph_dashes[0])
-# plt.plot((1/dx)[:index_lib],-eigen_lib[:index_lib],linewidth=2.9,label='$\delta=0.1$, '+r'$\beta_0=0.1$',alpha=0.8,dashes=graph_dashes[1])
-# plt.plot((1/dx)[:index_lic],-eigen_lic[:index_lic],linewidth=3,label='$\delta=3.2$, '+r'$\beta_0=200$',alpha=0.8,dashes=graph_dashes[3])
-#
-# plt.ylabel('Imaginary limit',fontsize=22)
-# graph_block()
-# plt.savefig('eigenvalues/eigen_experiments_li_PML.pdf')
-# plt.show()
-#
-# #  slope of the maximum imaginary part
-# plt.plot((1/dx)[:index_lia-1],-(eigen_lia[1:index_lia]-eigen_lia[:index_lia-1])/((1/dx)[1:index_lia]-(1/dx)[:index_lia-1]),linewidth=3,label='$\delta=1.5$, '+r'$\beta_0=30$',marker='D',markersize=3)
-# plt.plot((1/dx)[:index_lib-1],-(eigen_lib[1:index_lib]-eigen_lib[:index_lib-1])/((1/dx)[1:index_lib]-(1/dx)[:index_lib-1]),linewidth=3,label='$\delta=0.1$, '+r'$\beta_0=0.1$',marker='o',markersize=3)
-# plt.plot((1/dx)[:index_lic-1],-(eigen_lic[1:index_lic]-eigen_lic[:index_lic-1])/((1/dx)[1:index_lic]-(1/dx)[:index_lic-1]),linewidth=3,label='$\delta=3.2$, '+r'$\beta_0=200$',marker='v',markersize=3)
-#
-# plt.ylabel('Slope',fontsize=22)
-# graph_block()
-# plt.savefig('eigenvalues/eigen_experiments_li_slope_PML.pdf')
-# plt.show()
+def graph_limit_eigen_PML(dx,equ,ord):
+    #
+    # delta=float(sys.argv[1])
+    # beta0=float(sys.argv[2])
+    # example=sys.argv[3]
+    #
+    # limit_eigen(dx=dx,equ=equ,dim=dim,delta=delta,beta0=beta0,ord=ord,T=2,Ndt=1,example=example)
+
+    # limit_eigen(dx=dx,equ=equ,dim=dim,delta=1.5,beta0=30,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1a')
+    # limit_eigen(dx=dx,equ=equ,dim=dim,delta=0.1,beta0=0.1,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1b')
+    # limit_eigen(dx=dx,equ=equ,dim=dim,delta=3.2,beta0=200,ord=ord,T=2,Ndt=1,example='1D_heterogeneous_1c')
+
+
+    def graph_block():
+        plt.legend(fontsize=20)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel('$1/\Delta x$',fontsize=26)
+        plt.subplots_adjust(left=0.22, bottom=0.15, right=0.9, top=0.9)
+
+    eigen_lia=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1a.npy')
+    eigen_lib=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1b.npy')
+    eigen_lic=np.load('eigenvalues/eigen_li_equ_'+equ+'_ord_'+str(ord)+'_example_1D_heterogeneous_1c.npy')
+
+    index_lia=np.max(np.arange(len(eigen_lia))[eigen_lia!=0])
+    index_lib=np.max(np.arange(len(eigen_lib))[eigen_lib!=0])
+    index_lic=np.max(np.arange(len(eigen_lic))[eigen_lic!=0])
+
+    graph_dashes=np.array([[12,6],[6,1,6,6],[12,6,2,6],[3,2],[2,1,2,1,2,6]],dtype=np.ndarray)
+    # maximum imaginary part
+    plt.plot((1/dx)[:index_lia],-eigen_lia[:index_lia],linewidth=3.2,label='$\delta=1.5$, '+r'$\beta_0=30$',alpha=0.8,dashes=graph_dashes[0])
+    plt.plot((1/dx)[:index_lib],-eigen_lib[:index_lib],linewidth=2.9,label='$\delta=0.1$, '+r'$\beta_0=0.1$',alpha=0.8,dashes=graph_dashes[1])
+    plt.plot((1/dx)[:index_lic],-eigen_lic[:index_lic],linewidth=3,label='$\delta=3.2$, '+r'$\beta_0=200$',alpha=0.8,dashes=graph_dashes[3])
+
+    plt.ylabel('Imaginary limit',fontsize=26)
+    graph_block()
+    plt.savefig('eigenvalues/eigen_experiments_li_PML.pdf')
+    plt.show()
+
+    #  slope of the maximum imaginary part
+    plt.plot((1/dx)[:index_lia-1],-(eigen_lia[1:index_lia]-eigen_lia[:index_lia-1])/((1/dx)[1:index_lia]-(1/dx)[:index_lia-1]),linewidth=3,label='$\delta=1.5$, '+r'$\beta_0=30$',marker='D',markersize=3)
+    plt.plot((1/dx)[:index_lib-1],-(eigen_lib[1:index_lib]-eigen_lib[:index_lib-1])/((1/dx)[1:index_lib]-(1/dx)[:index_lib-1]),linewidth=3,label='$\delta=0.1$, '+r'$\beta_0=0.1$',marker='o',markersize=3)
+    plt.plot((1/dx)[:index_lic-1],-(eigen_lic[1:index_lic]-eigen_lic[:index_lic-1])/((1/dx)[1:index_lic]-(1/dx)[:index_lic-1]),linewidth=3,label='$\delta=3.2$, '+r'$\beta_0=200$',marker='v',markersize=3)
+
+    plt.ylabel('Slope',fontsize=26)
+    graph_block()
+    plt.savefig('eigenvalues_images/eigen_experiments_li_slope_PML.pdf')
+    plt.show()

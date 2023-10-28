@@ -41,7 +41,7 @@ def limit_m_f(m,gamma,c,d):
         return 4*mp.exp(d+c**2/(4*m))*pow(mp.exp(1)*gamma/m,m)
 
 
-def ellipse_properties(w,scale,type): # plotting the minimum ellipse and returning its parameters
+def ellipse_properties(w,scale,type,line_type=[1,0]): # plotting the minimum ellipse and returning its parameters
 
     e=pow(10,-12)
     max_it=20
@@ -63,12 +63,14 @@ def ellipse_properties(w,scale,type): # plotting the minimum ellipse and returni
     else:
         R,a12,a22,b1,b2,c=wezlz(Q,R,e,max_it)
 
-    # gamma,c_a,d,a=graph_ell.graph_q_ellip(Q,a12,a22,b1,b2,c,300,type,scale)
-    gamma,c_a,d,a=graph_ell.graph_q_circles1(Q,a12,a22,b1,b2,c,300,type,scale)
-    # gamma,c_a,d,a=graph_ell.graph_q_circles2(Q,a12,a22,b1,b2,c,300,type,scale)
-    # graph_ell.graph_q_ellip(Q,a12,a22,b1,b2,c,300,type,scale)
-    # graph_ell.graph_q_circles1(Q,a12,a22,b1,b2,c,300,type,scale)
-    # graph_ell.graph_q_circles2(Q,a12,a22,b1,b2,c,300,type,scale)
+    if type=='circles1':
+        gamma,c_a,d,a=graph_ell.graph_q_circles1(Q,a12,a22,b1,b2,c,300,line_type,scale)
+    elif type=='ellip':
+        gamma,c_a,d,a=graph_ell.graph_q_ellip(Q,a12,a22,b1,b2,c,300,line_type,scale)
+    elif type=='ellip_0':
+        gamma,c_a,d,a=graph_ell.graph_q_ellip(Q,a12,a22,b1,b2,c,300,line_type,scale,'r')
+    elif type=='circles2':
+        gamma,c_a,d,a=graph_ell.graph_q_circles2(Q,a12,a22,b1,b2,c,300,line_type,scale)
 
     print('gamma: ',gamma,', c: ',c_a,', d: ',d,', a: ',a)
     # plt.show()
@@ -164,18 +166,14 @@ def error_normal_matrix(n_imag,n_real,lim_imag,lim_real,ind):
 
     mp.mp.dps=30
 
-    lamb00=(np.random.rand(n_imag)-0.8)*lim_real
+    if ind==1: # negative eigenvalues
+        lamb00=(np.random.rand(n_imag)-0.8)*lim_real
+        lamb1=(np.random.rand(n_real)-0.8)*lim_real
+    elif ind==0: # positive eigenvalues
+        lamb00=(np.random.rand(n_imag)+0.3)*lim_real
+        lamb1=(np.random.rand(n_real)+0.3)*lim_real
     lamb01=np.random.rand(n_imag)*lim_imag
     lamb00[:int(n_imag/4)]=0  # creating some pure imaginary eigenvalues
-    # lamb00=(np.random.rand(n_imag)+0.3)*lim_real
-    # lamb01=np.random.rand(n_imag)*lim_imag
-    lamb1=(np.random.rand(n_real)-0.8)*lim_real
-    # np.save('Faber_error_bound/lamb00_ind_'+str(ind),lamb00)
-    # np.save('Faber_error_bound/lamb01_ind_'+str(ind),lamb01)
-    # np.save('Faber_error_bound/lamb1_ind_'+str(ind),lamb1)
-    # lamb00=np.load('Faber_error_bound/lamb00_ind_'+str(0)+'.npy')
-    # lamb01=np.load('Faber_error_bound/lamb01_ind_'+str(0)+'.npy')
-    # lamb1=np.load('Faber_error_bound/lamb1_ind_'+str(0)+'.npy')
 
     Q=ortho_group.rvs(dim=2*len(lamb00)+len(lamb1))
     H=Q.dot(do_matrix(lamb00,lamb01,lamb1).dot(Q.T))
@@ -183,7 +181,15 @@ def error_normal_matrix(n_imag,n_real,lim_imag,lim_real,ind):
     H=T*H
     w,v=np.linalg.eig(np.array(H.tolist(),dtype=complex))
 
-    gamma,c,d,a=ellipse_properties(w=w,scale=1)
+    gamma,c,d,a=ellipse_properties(w=w,scale=1,type='ellip_0')
+    plt.title(r'Ellipse containing $\sigma(H)$',fontsize=20)
+    if ind==1:
+        plt.xlim(([-21,6]))
+    elif ind==0:
+        plt.ylim([-5,5])
+    plt.savefig('Faber_error_bound_images/ellipse_ind_'+str(ind)+'.pdf')
+    plt.show()
+
     if np.isnan(gamma):
         return 0
 
@@ -192,22 +198,20 @@ def error_normal_matrix(n_imag,n_real,lim_imag,lim_real,ind):
         return 1
 
     eps=pow(10,-16)
-    #
-    m_max=limit_m(eps/2,gamma,c,d)
-    print('m_max: ',m_max)
-    # m_max=100
-    coefficients_faber=Faber_approx_coeff(m_max+1,gamma,c,d)
 
-    error_bound=err_estimate(m_max,gamma,c,d,a,coefficients_faber)+eps/2
+    m_max=aux0_fun.limit_m(eps/2,gamma,c,d,100)
+    print('m_max: ',m_max)
+    m_max=100
+    coefficients_faber=aux_fun.Faber_approx_coeff(m_max+1,gamma,c,d)
+
+    error_bound=aux0_fun.err_estimate(m_max,gamma,c,d,a,coefficients_faber)+eps/2
 
     print('error_bound')
 
-    error=err_exact(lamb00,lamb01,lamb1,Q,H,m_max,gamma,c,d,coefficients_faber)
+    error=aux0_fun.err_exact(lamb00,lamb01,lamb1,Q,H,m_max,gamma,c,d,coefficients_faber)
 
     np.save('Faber_error_bound/error_exact_ind_'+str(ind),error)
     np.save('Faber_error_bound/error_estimate_ind_'+str(ind),error_bound)
-
-    # return 2
 
     error=np.load('Faber_error_bound/error_exact_ind_'+str(ind)+'.npy')
     error_bound=np.load('Faber_error_bound/error_estimate_ind_'+str(ind)+'.npy')
@@ -215,15 +219,15 @@ def error_normal_matrix(n_imag,n_real,lim_imag,lim_real,ind):
     plt.plot((error_bound),'b',label='Our estimation',linestyle='--',linewidth=2)
     plt.plot((error),'r',label='Real error',linewidth=2)
     plt.yscale('log')
-    plt.legend(fontsize=15)
-    plt.xlabel('Polynomial degree', fontsize=18)
-    plt.xticks(fontsize=12)
-    plt.ylabel('Error ($log_{10}$)', fontsize=18)
-    plt.yticks(fontsize=12)
-    plt.title('Error estimation',fontsize=20)
+    plt.legend(fontsize=18)
+    plt.xlabel('Polynomial degree', fontsize=24)
+    plt.xticks(fontsize=18)
+    plt.ylabel('Error', fontsize=24)
+    plt.yticks(fontsize=18)
+    plt.title('Error estimation',fontsize=25)
     plt.gca().set_ylim(bottom=pow(10,-17))
-    plt.subplots_adjust(left=0.15, bottom=0.15, right=0.9, top=0.9)
-    plt.savefig('Faber_error_bound/error_bound_ind_'+str(ind)+'.pdf')
+    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.9)
+    plt.savefig('Faber_error_bound_images/error_bound_ind_'+str(ind)+'.pdf')
     plt.show()
 
 
@@ -252,43 +256,43 @@ def five_ellipses(n_imag,n_real,lim_imag,lim_real):
 
     graph_dashes=np.array([[12,0],[6,1,6,6],[8,4,2,4],[3,2],[1,1,1,1,1,6]],dtype=np.ndarray)
     for i in range(5):
-        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type=graph_dashes[i])
-        # if np.isnan(gamma):
-        #     print('fuck this')
-        #     return 0
-        #
+        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type='ellip',line_type=graph_dashes[i])
+        if np.isnan(gamma):
+            print('fuck this')
+            return 0
+
         # if limit_m_f(1,gamma,c,d)>1.e12:
         #     print('not this!')
         #     return 1
 
-        # eps=pow(10,-16)
-        # m_max=aux0_fun.limit_m(eps/2,gamma,c,d)
-        # print('m_max: ',m_max)
-        # m_max=100
-        # coefficients_faber=aux0_fun.Faber_approx_coeff(m_max+1,gamma,c,d)
-        # error=aux0_fun.err_exact(lamb00,lamb01,lamb1,Q,H,m_max,gamma,c,d,coefficients_faber)
-        # np.save('Faber_error_bound/error_exact_five_ellipses_ind_'+str(i),error)
-    # plt.gca().set_aspect('equal', adjustable='box')
-    # plt.draw()
-    plt.savefig('Faber_error_bound/five_ellipses.pdf')
+        eps=pow(10,-16)
+        m_max=aux0_fun.limit_m(eps/2,gamma,c,d)
+        print('m_max: ',m_max)
+        m_max=200
+        coefficients_faber=aux0_fun.Faber_approx_coeff(m_max+1,gamma,c,d)
+        error=aux0_fun.err_exact(lamb00,lamb01,lamb1,Q,H,m_max,gamma,c,d,coefficients_faber)
+        np.save('Faber_error_bound/error_exact_five_ellipses_ind_'+str(i),error)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.draw()
+    plt.savefig('Faber_error_bound_images/five_ellipses.pdf')
     plt.show()
 
     for i in range(5):
         error=np.load('Faber_error_bound/error_exact_five_ellipses_ind_'+str(i)+'.npy')
         plt.plot(error,label=str(int(ellipse_percent[i]*100))+'%',linewidth=2,dashes=graph_dashes[i])
     plt.yscale('log')
-    plt.legend(fontsize=15)
-    plt.xlabel('Polynomial degree', fontsize=18)
-    plt.xticks(fontsize=12)
-    plt.ylabel('Error', fontsize=18)
-    plt.yticks(fontsize=12)
+    plt.legend(fontsize=18)
+    plt.xlabel('Polynomial degree', fontsize=24)
+    plt.xticks(fontsize=18)
+    plt.ylabel('Error', fontsize=24)
+    plt.yticks(fontsize=18)
     # plt.title('Error estimation',fontsize=20)
-    plt.subplots_adjust(left=0.15, bottom=0.15, right=0.9, top=0.9)
-    plt.savefig('Faber_error_bound/error_five_ellipses.pdf')
+    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.9)
+    plt.savefig('Faber_error_bound_images/error_five_ellipses.pdf')
     plt.show()
 
 
-def five_circles_1(n_imag,n_real,lim_imag,lim_real):
+def five_circles_1(n_imag,n_real,lim_imag,lim_real,test='b'):
     # Approximation of some matrices exponential using matrix-matrix multiplication
 
     mp.mp.dps=30
@@ -304,25 +308,22 @@ def five_circles_1(n_imag,n_real,lim_imag,lim_real):
     H=T*H
     w,v=np.linalg.eig(np.array(H.tolist(),dtype=complex))
 
-    # R=np.zeros((len(w),2))
-    # R[:,0]=w.real
-    # R[:,1]=w.imag
-    # plt.plot(R[:,0],R[:,1],'ob',alpha=0.8)
+    if test=='c':
+        ellipse_percent=np.array([1,0])
+    else:
+        ellipse_percent=np.array([1,0.75,0.5,0.25,0])
 
-    cant_ell=5
-    # ellipse_percent=np.array([1,0])
-    ellipse_percent=np.array([1,0.75,0.5,0.25,0])
-
+    cant_ell=len(ellipse_percent)
     graph_dashes=np.array([[12,0],[6,1,6,6],[8,4,2,4],[3,2],[1,1,1,1,1,6]],dtype=np.ndarray)
 
     for i in range(cant_ell):
-        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type=graph_dashes[i])
+        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type='circles1',line_type=graph_dashes[i])
         if np.isnan(gamma):
-            print('fuck this')
+            print('not this')
             return 0
 
         if limit_m_f(1,gamma,c,d)>1.e12:
-            print('not this!')
+            print('neither this!')
             return 1
 
         # eps=pow(10,-16)
@@ -331,26 +332,31 @@ def five_circles_1(n_imag,n_real,lim_imag,lim_real):
         # m_max=100
         # coefficients_faber=aux0_fun.Faber_approx_coeff(m_max+1,gamma,c,d)
         # error=aux0_fun.err_exact(lamb00,lamb01,lamb1,Q,H,m_max,gamma,c,d,coefficients_faber)
-        # np.save('Faber_error_bound/error_exact_five_circles_1c_ind_'+str(i),error)
+        # np.save('Faber_error_bound/error_exact_five_circles_1'+test+'_ind_'+str(i),error)
     plt.gca().set_aspect('equal', adjustable='box')
     plt.draw()
-    plt.savefig('Faber_error_bound/five_circles_1b.pdf')
+    plt.xticks(fontsize=18)
+    plt.xticks([-60,-45,-30,-15,0,10])
+    plt.yticks(fontsize=18)
+    plt.savefig('Faber_error_bound_images/five_circles_1'+test+'.pdf')
     plt.show()
 
     label=np.array(['circle','ellipse'])
     for i in range(cant_ell):
-        error=np.load('Faber_error_bound/error_exact_five_circles_1b_ind_'+str(i)+'.npy')
-        plt.plot(error,label=str(int(ellipse_percent[i]*100))+'%',linewidth=2,dashes=graph_dashes[i])
-        # plt.plot(error,label=label[i],linewidth=2,dashes=graph_dashes[i])
+        error=np.load('Faber_error_bound/error_exact_five_circles_1'+test+'_ind_'+str(i)+'.npy')
+        if test=='c':
+           plt.plot(error,label=label[i],linewidth=2,dashes=graph_dashes[i])
+        else:
+            plt.plot(error,label=str(int(ellipse_percent[i]*100))+'%',linewidth=2,dashes=graph_dashes[i])
     plt.yscale('log')
-    plt.legend(fontsize=15)
-    plt.xlabel('Polynomial degree', fontsize=18)
-    plt.xticks(fontsize=12)
-    plt.ylabel('Error', fontsize=18)
-    plt.yticks(fontsize=12)
+    plt.legend(fontsize=18)
+    plt.xlabel('Polynomial degree', fontsize=24)
+    plt.xticks(fontsize=18)
+    plt.ylabel('Error', fontsize=24)
+    plt.yticks(fontsize=18)
     # plt.title('Error estimation',fontsize=20)
-    plt.subplots_adjust(left=0.15, bottom=0.15, right=0.9, top=0.9)
-    plt.savefig('Faber_error_bound/error_five_circles_1b.pdf')
+    plt.subplots_adjust(left=0.2, bottom=0.15, right=0.9, top=0.9)
+    plt.savefig('Faber_error_bound_images/error_five_circles_1'+test+'.pdf')
     plt.show()
 
 
@@ -382,14 +388,14 @@ def five_circles_2(n_imag,n_real,lim_imag,lim_real):
 
     graph_dashes=np.array([[12,6],[6,1,6,6],[12,6,2,6],[3,2],[2,1,2,1,2,6]],dtype=np.ndarray)
     for i in range(5):
-        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type=graph_dashes[i])
-        if np.isnan(gamma):
-            print('fuck this')
-            return 0
-
-        if limit_m_f(1,gamma,c,d)>1.e12:
-            print('not this!')
-            return 1
+        gamma,c,d,a=ellipse_properties(w=w,scale=ellipse_percent[i],type='circles2',line_type=graph_dashes[i])
+        # if np.isnan(gamma):
+        #     print('Error with gamma')
+        #     return 0
+        #
+        # if limit_m_f(1,gamma,c,d)>1.e12:
+        #     print('Is not suitable for approximation! Too large error')
+        #     return 1
 
         # eps=pow(10,-16)
         # m_max=limit_m(eps/2,gamma,c,d)
@@ -403,7 +409,7 @@ def five_circles_2(n_imag,n_real,lim_imag,lim_real):
         # Faber_graph[i,:,:,:]=Faber_approx_seq(H,m_max,gamma,c,d,coefficients_faber)
     plt.gca().set_aspect('equal', adjustable='box')
     plt.draw()
-    plt.savefig('Faber_error_bound/five_circles_2b.pdf')
+    plt.savefig('Faber_error_bound_images/five_circles_2b.pdf')
     plt.show()
 
     for i in range(5):
@@ -426,7 +432,7 @@ def five_circles_2(n_imag,n_real,lim_imag,lim_real):
     # plt.title('Error estimation',fontsize=20)
     plt.ylim([-16, 2])
     plt.subplots_adjust(left=0.15, bottom=0.15, right=0.9, top=0.9)
-    plt.savefig('Faber_error_bound/error_five_circles_2b.pdf')
+    plt.savefig('Faber_error_bound_images/error_five_circles_2b.pdf')
     plt.show()
 
 
@@ -600,15 +606,10 @@ def acoustic_error_bound(dx,equ,dim,abc,delta,beta0,ord,T,Ndt,degree,example,ind
     plt.close()
 
 
-# examples_error_normal_matrix(100)
-# positive
-# error_normal_matrix(25,10,8,8,0)
-# negative
-# error_normal_matrix(25,10,120,10,1)
 
-# five_ellipses(25,15,50,70)
+
 # five_circles_1(25,15,500,20)
-five_circles_1(25,15,100,60)
+
 # five_circles_2(25,15,0.5,1)
 # five_circles_3(25,15,50,70)
 # mp.mp.dps=50
